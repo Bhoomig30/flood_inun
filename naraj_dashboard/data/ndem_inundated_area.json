@@ -1,0 +1,29 @@
+{
+  "aoi": "85.55-85.95E, 20.30-20.65N",
+  "events": {
+    "16-Aug-2022": {
+      "inundated_area_km2_within_aoi": 106.87,
+      "n_polygons": 153,
+      "status": "DERIVED",
+      "method": "Sum of polygon areas computed in EPSG:32645 (UTM 45N), from the verified NDEM GeoJSON geometries clipped to the Naraj AOI. Not a fabricated value."
+    },
+    "18-Aug-2022": {
+      "inundated_area_km2_within_aoi": 15.65,
+      "n_polygons": 235,
+      "status": "DERIVED",
+      "method": "Sum of polygon areas computed in EPSG:32645 (UTM 45N), from the verified NDEM GeoJSON geometries clipped to the Naraj AOI. Not a fabricated value."
+    },
+    "19-Aug-2022": {
+      "inundated_area_km2_within_aoi": 106.27,
+      "n_polygons": 144,
+      "status": "DERIVED",
+      "method": "Sum of polygon areas computed in EPSG:32645 (UTM 45N), from the verified NDEM GeoJSON geometries clipped to the Naraj AOI. Not a fabricated value."
+    },
+    "21-Aug-2022": {
+      "inundated_area_km2_within_aoi": 140.47,
+      "n_polygons": 393,
+      "status": "DERIVED",
+      "method": "Sum of polygon areas computed in EPSG:32645 (UTM 45N), from the verified NDEM GeoJSON geometries clipped to the Naraj AOI. Not a fabricated value."
+    }
+  }
+}

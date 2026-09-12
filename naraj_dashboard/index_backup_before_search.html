@@ -1,0 +1,1170 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8" />
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+/>
+
+<title>
+    FloodWatch — Flood information made easier
+</title>
+
+
+<!-- ========================================================
+     LEAFLET
+========================================================= -->
+
+<link
+    rel="stylesheet"
+    href="vendor/leaflet/leaflet.css"
+/>
+
+
+<!-- ========================================================
+     FONTS
+========================================================= -->
+
+<link
+    rel="preconnect"
+    href="https://fonts.googleapis.com"
+/>
+
+<link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet"
+/>
+
+
+<!-- ========================================================
+     PROJECT CSS
+========================================================= -->
+
+<link
+    rel="stylesheet"
+    href="style.css"
+/>
+
+<link
+    rel="stylesheet"
+    href="public.css"
+/>
+
+
+<!-- ========================================================
+     LOCATION / CWC UI STYLES
+========================================================= -->
+
+<style>
+
+.location-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin: 15px 0;
+}
+
+.location-btn {
+    border: none;
+    border-radius: 8px;
+    padding: 11px 18px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 600;
+    background: #1769aa;
+    color: white;
+}
+
+.location-btn:hover {
+    opacity: 0.9;
+}
+
+.location-btn:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.location-status {
+    padding: 9px 12px;
+    border-radius: 7px;
+    background: #f4f6f8;
+    font-size: 14px;
+}
+
+.location-status.success {
+    border: 1px solid #198754;
+}
+
+.location-status.error {
+    border: 1px solid #dc3545;
+}
+
+.location-status.loading {
+    border: 1px solid #1769aa;
+}
+
+.cwc-location-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(
+            auto-fit,
+            minmax(260px, 1fr)
+        );
+
+    gap: 15px;
+
+    margin-top: 15px;
+}
+
+.cwc-card {
+    border: 1px solid #dfe5ea;
+    border-radius: 10px;
+    padding: 16px;
+    background: #ffffff;
+}
+
+.cwc-card h3 {
+    margin-top: 0;
+}
+
+.cwc-value {
+    font-size: 24px;
+    font-weight: 700;
+    margin: 8px 0;
+}
+
+.cwc-meta {
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.cwc-notice {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 7px;
+    background: #fff8e6;
+    font-size: 13px;
+}
+
+.cwc-map-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 12px;
+    font-size: 13px;
+}
+
+.cwc-map-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.legend-user {
+    background: #1769aa;
+}
+
+.legend-rainfall {
+    background: #198754;
+}
+
+.legend-river {
+    background: #7b2cbf;
+}
+
+</style>
+
+</head>
+
+
+<body class="public-body">
+
+
+<!-- ========================================================
+     HEADER
+========================================================= -->
+
+<header class="pub-header">
+
+    <div class="pub-header-brand">
+
+        <span class="pub-logo">
+            FloodWatch
+        </span>
+
+        <span class="pub-tagline">
+            Flood information made easier
+        </span>
+
+    </div>
+
+
+    <a
+        href="research.html"
+        class="pub-research-link"
+    >
+        Research / Technical View
+    </a>
+
+</header>
+
+
+<!-- ========================================================
+     NAVIGATION
+========================================================= -->
+
+<nav
+    class="pub-nav"
+    id="pub-nav"
+>
+
+    <button
+        class="pub-nav-btn active"
+        data-pubtab="overview"
+    >
+        Overview
+    </button>
+
+
+    <button
+        class="pub-nav-btn"
+        data-pubtab="floodmap"
+    >
+        Flood Map
+    </button>
+
+
+    <button
+        class="pub-nav-btn"
+        data-pubtab="waterlevels"
+    >
+        Water Levels
+    </button>
+
+
+    <button
+        class="pub-nav-btn"
+        data-pubtab="satellite"
+    >
+        Satellite Evidence
+    </button>
+
+
+    <button
+        class="pub-nav-btn"
+        data-pubtab="pastfloods"
+    >
+        Past Floods
+    </button>
+
+
+    <button
+        class="pub-guide-btn"
+        id="pub-guide-open-btn"
+    >
+        ? Guide
+    </button>
+
+</nav>
+
+
+<!-- ========================================================
+     TOUR BANNER
+========================================================= -->
+
+<div
+    class="pub-tour-banner hidden"
+    id="pub-tour-banner"
+>
+
+    <span>
+        New to FloodWatch?
+    </span>
+
+
+    <button
+        id="pub-tour-start-btn"
+    >
+        Take a quick tour
+    </button>
+
+
+    <button
+        id="pub-tour-skip-btn"
+        class="pub-tour-skip"
+    >
+        Skip
+    </button>
+
+</div>
+
+
+<!-- ========================================================
+     MAIN
+========================================================= -->
+
+<main class="pub-main">
+
+
+<!-- ========================================================
+     OVERVIEW
+========================================================= -->
+
+<section
+    class="pub-pane active"
+    id="pub-overview"
+>
+
+
+    <!-- LOCATION CONTROLS -->
+
+    <div class="location-tools">
+
+        <button
+            type="button"
+            id="use-my-location"
+            class="location-btn"
+        >
+            📍 Use My Location
+        </button>
+
+
+        <div
+            id="location-status"
+            class="location-status"
+        >
+            Location not selected
+        </div>
+
+    </div>
+
+
+    <!-- SEARCH / EVENT -->
+
+    <div class="pub-controls-row">
+
+
+        <div class="pub-search-box">
+
+            <input
+                type="text"
+                id="location-search"
+                placeholder="Search a location"
+            />
+
+        </div>
+
+
+        <div class="pub-event-select">
+
+            <label
+                for="pub-event-picker"
+            >
+                Viewing event:
+            </label>
+
+
+            <select
+                id="pub-event-picker"
+            >
+            </select>
+
+        </div>
+
+    </div>
+
+
+    <p class="pub-demo-note">
+
+        Use <strong>Use My Location</strong>
+        to check the nearest available
+        CWC rainfall and river monitoring
+        stations.
+
+    </p>
+
+
+    <!-- ====================================================
+         MAIN MAP
+    ===================================================== -->
+
+    <div class="pub-map-wrap">
+
+        <div
+            id="pub-map"
+        ></div>
+
+
+        <button
+            class="pub-whatami-btn"
+            id="pub-whatami-btn"
+        >
+            What am I looking at?
+        </button>
+
+    </div>
+
+
+    <!-- ====================================================
+         CWC LOCATION DATA
+    ===================================================== -->
+
+    <div
+        class="cwc-location-grid"
+        id="cwc-location-data"
+    >
+
+
+        <!-- RAINFALL -->
+
+        <div
+            class="cwc-card"
+            id="rainfall-card"
+        >
+
+            <h3>
+                🌧 Rainfall
+            </h3>
+
+
+            <div
+                class="cwc-value"
+                id="rainfall-value"
+            >
+                —
+            </div>
+
+
+            <div
+                class="cwc-meta"
+                id="rainfall-details"
+            >
+                Select your location
+                to find the nearest
+                CWC rainfall station.
+            </div>
+
+        </div>
+
+
+        <!-- RIVER -->
+
+        <div
+            class="cwc-card"
+            id="river-card"
+        >
+
+            <h3>
+                🌊 River Condition
+            </h3>
+
+
+            <div
+                class="cwc-value"
+                id="river-value"
+            >
+                —
+            </div>
+
+
+            <div
+                class="cwc-meta"
+                id="river-details"
+            >
+                Select your location
+                to find the nearest
+                CWC river station.
+            </div>
+
+        </div>
+
+
+    </div>
+
+
+    <!-- CWC NOTICE -->
+
+    <div
+        class="cwc-notice"
+        id="cwc-data-notice"
+    >
+
+        CWC observations shown here are
+        based on the locally available
+        historical datasets. They should
+        not be interpreted as guaranteed
+        live conditions.
+
+    </div>
+
+
+    <!-- MAP LEGEND -->
+
+    <div
+        class="cwc-map-legend"
+    >
+
+        <span>
+            <span
+                class="legend-dot legend-user"
+            ></span>
+
+            Your location
+        </span>
+
+
+        <span>
+            <span
+                class="legend-dot legend-rainfall"
+            ></span>
+
+            CWC rainfall station
+        </span>
+
+
+        <span>
+            <span
+                class="legend-dot legend-river"
+            ></span>
+
+            CWC river station
+        </span>
+
+    </div>
+
+
+    <!-- EXISTING SITUATION CARDS -->
+
+    <div
+        class="pub-cards-row"
+        id="pub-situation-cards"
+    ></div>
+
+
+</section>
+
+
+
+<!-- ========================================================
+     FLOOD MAP
+========================================================= -->
+
+<section
+    class="pub-pane"
+    id="pub-floodmap"
+>
+
+    <div class="pub-card wide">
+
+
+        <h2>
+            Flood Map
+        </h2>
+
+
+        <p class="pub-subtext">
+
+            The map below shows the potentially
+            affected area identified from satellite
+            observations, along with rivers,
+            monitoring stations, and reference layers.
+
+        </p>
+
+
+        <div class="pub-map-wrap tall">
+
+            <div
+                id="pub-map-2"
+            ></div>
+
+
+            <button
+                class="pub-whatami-btn"
+                id="pub-whatami-btn-2"
+            >
+                What am I looking at?
+            </button>
+
+        </div>
+
+
+        <div
+            class="pub-layers-simple"
+        >
+
+            <h3>
+
+                Map layers
+
+                <span
+                    class="info-icon-static"
+                    title="Turn map information on or off. Click 'What am I looking at?' for a plain-language explanation."
+                >
+                    i
+                </span>
+
+            </h3>
+
+
+            <div
+                id="pub-layer-list-simple"
+            ></div>
+
+
+            <button
+                class="pub-more-layers-btn"
+                id="pub-more-layers-btn"
+            >
+                More layers (advanced)
+            </button>
+
+
+            <div
+                id="pub-layer-list-advanced"
+                class="hidden"
+            ></div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+
+<!-- ========================================================
+     WATER LEVELS
+========================================================= -->
+
+<section
+    class="pub-pane"
+    id="pub-waterlevels"
+>
+
+    <div class="pub-card wide">
+
+
+        <h2>
+
+            River Water Level
+
+            <span
+                class="info-icon-static"
+                title="Recorded water levels at a river monitoring station."
+            >
+                i
+            </span>
+
+        </h2>
+
+
+        <p class="pub-subtext">
+
+            This chart shows recorded water
+            levels from the selected monitoring
+            station.
+
+        </p>
+
+
+        <div
+            class="pub-station-chips"
+            id="pub-station-chips"
+        ></div>
+
+
+        <canvas
+            id="pub-wl-chart"
+            height="130"
+        ></canvas>
+
+
+        <p
+            class="pub-caption"
+            id="pub-wl-caption"
+        ></p>
+
+    </div>
+
+</section>
+
+
+
+<!-- ========================================================
+     SATELLITE EVIDENCE
+========================================================= -->
+
+<section
+    class="pub-pane"
+    id="pub-satellite"
+>
+
+    <div class="pub-card wide">
+
+
+        <h2>
+
+            Satellite Evidence
+
+            <span
+                class="info-icon-static"
+                title="Radar satellites can observe the ground even through clouds and at night."
+            >
+                i
+            </span>
+
+        </h2>
+
+
+        <p class="pub-subtext">
+
+            Radar satellites can observe changes
+            in the Earth's surface even when
+            clouds are present.
+
+        </p>
+
+
+        <div class="sat-story-grid">
+
+
+            <div class="sat-story-step">
+
+                <div class="sat-story-label">
+                    Before
+                </div>
+
+                <div
+                    class="sat-story-date"
+                    id="sat-date-before"
+                >
+                    06 Aug
+                </div>
+
+                <img
+                    id="sat-img-before"
+                    class="sat-story-img"
+                    src=""
+                    alt="Before the event"
+                />
+
+            </div>
+
+
+            <div class="sat-story-arrow">
+                ↓
+            </div>
+
+
+            <div class="sat-story-step">
+
+                <div class="sat-story-label">
+                    During Event
+                </div>
+
+                <div
+                    class="sat-story-date"
+                    id="sat-date-during"
+                >
+                    18 Aug
+                </div>
+
+                <img
+                    id="sat-img-during"
+                    class="sat-story-img"
+                    src=""
+                    alt="During the event"
+                />
+
+            </div>
+
+
+            <div class="sat-story-arrow">
+                ↓
+            </div>
+
+
+            <div class="sat-story-step">
+
+                <div class="sat-story-label">
+                    Change Detected
+                </div>
+
+                <img
+                    id="sat-img-change"
+                    class="sat-story-img"
+                    src=""
+                    alt="Change detected"
+                />
+
+            </div>
+
+
+            <div class="sat-story-arrow">
+                ↓
+            </div>
+
+
+            <div class="sat-story-step highlight">
+
+                <div class="sat-story-label">
+                    Potential Flood Extent
+                </div>
+
+                <img
+                    id="sat-img-candidate"
+                    class="sat-story-img"
+                    src=""
+                    alt="Potential flood extent"
+                />
+
+            </div>
+
+
+        </div>
+
+
+        <button
+            class="pub-tech-details-btn"
+            id="sat-tech-toggle"
+        >
+            Technical details
+        </button>
+
+
+        <div
+            class="pub-tech-details hidden"
+            id="sat-tech-content"
+        ></div>
+
+    </div>
+
+</section>
+
+
+
+<!-- ========================================================
+     PAST FLOODS
+========================================================= -->
+
+<section
+    class="pub-pane"
+    id="pub-pastfloods"
+>
+
+    <div class="pub-card wide">
+
+
+        <h2>
+            Past Floods — August 2022
+        </h2>
+
+
+        <p class="pub-subtext">
+
+            Browse available historical
+            flood dates for the current
+            demonstration area.
+
+        </p>
+
+
+        <div
+            id="pub-past-floods-list"
+        ></div>
+
+    </div>
+
+</section>
+
+
+
+<!-- ========================================================
+     GUIDE DRAWER
+========================================================= -->
+
+<div
+    class="guide-backdrop hidden"
+    id="guide-backdrop"
+>
+
+    <div class="guide-drawer">
+
+
+        <div class="guide-drawer-header">
+
+            <h2>
+                Understanding FloodWatch
+            </h2>
+
+
+            <button
+                class="guide-close-btn"
+                id="guide-close-btn"
+                aria-label="Close guide"
+            >
+                ✕
+            </button>
+
+        </div>
+
+
+        <div class="guide-drawer-body">
+
+
+            <p class="guide-intro">
+
+                FloodWatch combines river-level
+                records, satellite observations,
+                terrain information and historical
+                flood maps to help people understand
+                flood events.
+
+            </p>
+
+
+            <div class="guide-item">
+
+                <div class="guide-item-title">
+                    🌊 Potentially Affected Area
+                </div>
+
+                <p>
+                    <strong>What is it?</strong>
+                    An area identified by the analysis
+                    as potentially affected by flooding.
+                </p>
+
+                <p>
+                    <strong>Remember:</strong>
+                    It is an analytical estimate and
+                    should not be interpreted as an
+                    emergency evacuation boundary.
+                </p>
+
+            </div>
+
+
+            <div class="guide-item">
+
+                <div class="guide-item-title">
+                    📈 River Water Level
+                </div>
+
+                <p>
+                    Recorded observations from
+                    river monitoring stations.
+                </p>
+
+            </div>
+
+
+            <div class="guide-item">
+
+                <div class="guide-item-title">
+                    🛰 Satellite Evidence
+                </div>
+
+                <p>
+                    Radar satellites can observe
+                    the surface during day or night
+                    and through cloud cover.
+                </p>
+
+            </div>
+
+
+            <div class="guide-item">
+
+                <div class="guide-item-title">
+                    🗺 Historical Flood Extent
+                </div>
+
+                <p>
+                    Areas recorded as inundated
+                    during past flood events.
+                </p>
+
+            </div>
+
+
+            <div class="guide-item">
+
+                <div class="guide-item-title">
+                    ⛰ Terrain / Elevation
+                </div>
+
+                <p>
+                    Information describing relatively
+                    higher and lower areas.
+                </p>
+
+            </div>
+
+
+            <div class="guide-item">
+
+                <div class="guide-item-title">
+                    📍 Monitoring Station
+                </div>
+
+                <p>
+                    A location where river or rainfall
+                    observations are recorded.
+                </p>
+
+            </div>
+
+
+            <button
+                class="guide-tour-again-btn"
+                id="guide-tour-again-btn"
+            >
+                Start tour again
+            </button>
+
+
+            <p class="guide-footer-note">
+
+                Want the full technical methodology
+                and validation details?
+
+                <a href="research.html">
+                    Open Research / Technical View
+                </a>
+
+            </p>
+
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- ========================================================
+     FIRST-TIME TOUR
+========================================================= -->
+
+<div
+    class="tour-backdrop hidden"
+    id="tour-backdrop"
+>
+
+    <div class="tour-modal">
+
+
+        <div
+            class="tour-step-count"
+            id="tour-step-count"
+        >
+            Step 1 of 5
+        </div>
+
+
+        <h3
+            id="tour-title"
+        ></h3>
+
+
+        <p
+            id="tour-text"
+        ></p>
+
+
+        <div class="tour-controls">
+
+
+            <button
+                id="tour-skip-btn"
+                class="tour-skip-btn"
+            >
+                Skip
+            </button>
+
+
+            <button
+                id="tour-next-btn"
+                class="tour-next-btn"
+            >
+                Next
+            </button>
+
+
+        </div>
+
+    </div>
+
+</div>
+
+
+</main>
+
+
+
+<!-- ========================================================
+     FOOTER
+========================================================= -->
+
+<footer class="pub-footer">
+
+    FloodWatch — a flood information
+    demonstration system.
+
+    <a href="research.html">
+        Research / Technical View
+    </a>
+
+</footer>
+
+
+
+<!-- ========================================================
+     JAVASCRIPT LIBRARIES
+========================================================= -->
+
+<script
+    src="vendor/leaflet/leaflet.js"
+></script>
+
+
+<script
+    src="vendor/chartjs/chart.umd.js"
+></script>
+
+
+<!-- ========================================================
+     EXISTING DASHBOARD JAVASCRIPT
+========================================================= -->
+
+<script
+    src="public.js"
+></script>
+
+<!-- ========================================================
+     NARAJ LOCATION / CWC INTEGRATION
+========================================================= -->
+
+<script
+    src="app.js"
+></script>
+
+
+</body>
+
+</html>

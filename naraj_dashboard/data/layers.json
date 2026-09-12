@@ -1,0 +1,225 @@
+[
+  {
+    "id": "aoi",
+    "label": "Study Area (AOI)",
+    "type": "geojson",
+    "file": "data/naraj_aoi.geojson",
+    "style": {
+      "color": "#0b3350",
+      "weight": 2,
+      "fillOpacity": 0,
+      "dashArray": "6 4"
+    },
+    "status": "OBSERVED",
+    "default_on": true,
+    "group": "Reference"
+  },
+  {
+    "id": "cwc_stations",
+    "label": "CWC Stations (58, verified)",
+    "type": "stations",
+    "file": "data/cwc_stations.geojson",
+    "status": "OBSERVED",
+    "default_on": true,
+    "group": "Reference"
+  },
+  {
+    "id": "naraj_gauge",
+    "label": "Naraj Gauge",
+    "type": "point",
+    "file": "data/naraj_gauge.geojson",
+    "status": "OBSERVED",
+    "default_on": true,
+    "group": "Reference"
+  },
+  {
+    "id": "dem",
+    "label": "DEM / Elevation",
+    "type": "image_overlay",
+    "file": "data/dem/naraj_aoi_dem_hillshade.png",
+    "bounds_file": "data/dem/naraj_aoi_dem_bounds.json",
+    "status": "DERIVED",
+    "default_on": false,
+    "group": "Terrain"
+  },
+  {
+    "id": "s1_06aug_footprint",
+    "label": "Sentinel-1 Footprint \u2014 6-Aug (pre-flood)",
+    "type": "geojson",
+    "file": "data/sentinel1/s1_06aug_footprint.geojson",
+    "style": {
+      "color": "#0f6b78",
+      "weight": 2,
+      "fillOpacity": 0.05,
+      "dashArray": "3 3"
+    },
+    "status": "OBSERVED",
+    "default_on": false,
+    "group": "Sentinel-1"
+  },
+  {
+    "id": "s1_18aug_footprint",
+    "label": "Sentinel-1 Footprint \u2014 18-Aug (during-flood)",
+    "type": "geojson",
+    "file": "data/sentinel1/s1_18aug_footprint.geojson",
+    "style": {
+      "color": "#a4271f",
+      "weight": 2,
+      "fillOpacity": 0.05,
+      "dashArray": "3 3"
+    },
+    "status": "OBSERVED",
+    "default_on": false,
+    "group": "Sentinel-1"
+  },
+  {
+    "id": "ndem_16aug",
+    "label": "NDEM Inundation \u2014 16-Aug-2022",
+    "type": "geojson",
+    "file": "data/ndem/ndem_16aug.geojson",
+    "style": {
+      "color": "#c2760c",
+      "weight": 1,
+      "fillColor": "#c2760c",
+      "fillOpacity": 0.45
+    },
+    "status": "HISTORICAL",
+    "default_on": false,
+    "group": "Historical Inundation (NDEM)"
+  },
+  {
+    "id": "ndem_18aug",
+    "label": "NDEM Inundation \u2014 18-Aug-2022",
+    "type": "geojson",
+    "file": "data/ndem/ndem_18aug.geojson",
+    "style": {
+      "color": "#c2760c",
+      "weight": 1,
+      "fillColor": "#c2760c",
+      "fillOpacity": 0.45
+    },
+    "status": "HISTORICAL",
+    "default_on": true,
+    "group": "Historical Inundation (NDEM)"
+  },
+  {
+    "id": "ndem_19aug",
+    "label": "NDEM Inundation \u2014 19-Aug-2022",
+    "type": "geojson",
+    "file": "data/ndem/ndem_19aug.geojson",
+    "style": {
+      "color": "#c2760c",
+      "weight": 1,
+      "fillColor": "#c2760c",
+      "fillOpacity": 0.45
+    },
+    "status": "HISTORICAL",
+    "default_on": false,
+    "group": "Historical Inundation (NDEM)"
+  },
+  {
+    "id": "ndem_21aug",
+    "label": "NDEM Inundation \u2014 21-Aug-2022",
+    "type": "geojson",
+    "file": "data/ndem/ndem_21aug.geojson",
+    "style": {
+      "color": "#c2760c",
+      "weight": 1,
+      "fillColor": "#c2760c",
+      "fillOpacity": 0.45
+    },
+    "status": "HISTORICAL",
+    "default_on": false,
+    "group": "Historical Inundation (NDEM)"
+  },
+  {
+    "id": "sar_preflood_vv",
+    "label": "SAR Pre-Flood (6-Aug VV, calibrated)",
+    "type": "image_overlay",
+    "file": "data/sar_flood/preflood_vv.png",
+    "bounds_file": "data/sar_flood/preflood_vv_bounds.json",
+    "status": "DERIVED",
+    "default_on": false,
+    "group": "SAR Flood Detection"
+  },
+  {
+    "id": "sar_duringflood_vv",
+    "label": "SAR During-Flood (18-Aug VV, calibrated)",
+    "type": "image_overlay",
+    "file": "data/sar_flood/duringflood_vv.png",
+    "bounds_file": "data/sar_flood/duringflood_vv_bounds.json",
+    "status": "DERIVED",
+    "default_on": false,
+    "group": "SAR Flood Detection"
+  },
+  {
+    "id": "sar_change",
+    "label": "SAR Change (combined VV+VH, dB)",
+    "type": "image_overlay",
+    "file": "data/sar_flood/change_combined.png",
+    "bounds_file": "data/sar_flood/change_combined_bounds.json",
+    "status": "DERIVED",
+    "default_on": false,
+    "group": "SAR Flood Detection"
+  },
+  {
+    "id": "sar_flood_candidate",
+    "label": "SAR Candidate Flood Mask (18-Aug)",
+    "type": "geojson",
+    "file": "data/sar_flood/sar_flood_candidate_18aug.geojson",
+    "style": {
+      "color": "#a4271f",
+      "weight": 1,
+      "fillColor": "#a4271f",
+      "fillOpacity": 0.55
+    },
+    "status": "DERIVED",
+    "default_on": true,
+    "group": "SAR Flood Detection"
+  },
+  {
+    "id": "sar_valid_coverage",
+    "label": "SAR Valid-Coverage Boundary",
+    "type": "geojson",
+    "file": "data/sar_flood/sar_valid_coverage.geojson",
+    "style": {
+      "color": "#0b3350",
+      "weight": 2,
+      "fillOpacity": 0,
+      "dashArray": "4 4"
+    },
+    "status": "DERIVED",
+    "default_on": true,
+    "group": "SAR Flood Detection"
+  },
+  {
+    "id": "sar_preflood_vh",
+    "label": "SAR Pre-Flood (6-Aug VH, calibrated)",
+    "type": "image_overlay",
+    "file": "data/sar_flood/preflood_vh.png",
+    "bounds_file": "data/sar_flood/preflood_vh_bounds.json",
+    "status": "DERIVED",
+    "default_on": false,
+    "group": "SAR Flood Detection"
+  },
+  {
+    "id": "sar_duringflood_vh",
+    "label": "SAR During-Flood (18-Aug VH, calibrated)",
+    "type": "image_overlay",
+    "file": "data/sar_flood/duringflood_vh.png",
+    "bounds_file": "data/sar_flood/duringflood_vh_bounds.json",
+    "status": "DERIVED",
+    "default_on": false,
+    "group": "SAR Flood Detection"
+  },
+  {
+    "id": "sar_ndem_agreement",
+    "label": "Validation: SAR vs NDEM Agreement",
+    "type": "image_overlay",
+    "file": "data/sar_flood/sar_ndem_agreement.png",
+    "bounds_file": "data/sar_flood/sar_ndem_agreement_bounds.json",
+    "status": "DERIVED",
+    "default_on": false,
+    "group": "Validation"
+  }
+]

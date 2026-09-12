@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Research View — Flood Inundation Analysis System</title>
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header class="app-header">
+  <div class="header-left">
+    <h1>AI-Driven Flood Inundation Analysis &amp; Decision Support System</h1>
+    <p class="subtitle">Research / Technical View — Demonstration case: Mahanadi Basin, Odisha</p>
+  </div>
+  <div class="header-right">
+    <a href="index.html" class="back-to-public-link">← Back to Public View</a>
+  </div>
+</header>
+
+<div class="guided-flow" id="guided-flow">
+  <span class="guided-flow-label">Guided analysis:</span>
+  <button class="guided-step" data-step="1">1. Event</button>
+  <span class="guided-arrow">→</span>
+  <button class="guided-step" data-step="2">2. SAR analysis</button>
+  <span class="guided-arrow">→</span>
+  <button class="guided-step" data-step="3">3. Why flagged?</button>
+  <span class="guided-arrow">→</span>
+  <button class="guided-step" data-step="4">4. Validation</button>
+  <span class="guided-arrow">→</span>
+  <button class="guided-step" data-step="5">5. Decision support</button>
+  <span class="guided-arrow">→</span>
+  <button class="guided-step" data-step="6">6. AI/ML roadmap</button>
+</div>
+
+<div class="situation-cards" id="situation-cards">
+  <div class="sit-card" id="sitcard-event" data-goto="overview">
+    <span class="sit-label">Event</span>
+    <span class="sit-value" id="sit-event">—</span>
+  </div>
+  <div class="sit-card" id="sitcard-cwc" data-goto="overview">
+    <span class="sit-label">CWC Level</span>
+    <span class="sit-value" id="sit-cwc">—</span>
+  </div>
+  <div class="sit-card" id="sitcard-sar" data-goto="sar">
+    <span class="sit-label">SAR Change</span>
+    <span class="sit-value" id="sit-sar">—</span>
+  </div>
+  <div class="sit-card highlight" id="sitcard-candidate" data-goto="sar">
+    <span class="sit-label">Candidate Inundation</span>
+    <span class="sit-value" id="sit-candidate">—</span>
+  </div>
+  <div class="sit-card" id="sitcard-ref" data-goto="validation">
+    <span class="sit-label">Reference</span>
+    <span class="sit-value" id="sit-ref">—</span>
+  </div>
+  <div class="sit-card" id="sitcard-validation" data-goto="validation">
+    <span class="sit-label">Validation</span>
+    <span class="sit-value" id="sit-validation">—</span>
+  </div>
+</div>
+
+<nav class="tabs" id="tabs">
+  <button class="tab-btn active" data-tab="overview">Overview &amp; Map</button>
+  <button class="tab-btn" data-tab="sar">SAR Analysis</button>
+  <button class="tab-btn" data-tab="validation">Validation</button>
+  <button class="tab-btn" data-tab="terrain">Terrain Scenario</button>
+  <button class="tab-btn" data-tab="exposure">Exposure &amp; Decision Support</button>
+  <button class="tab-btn" data-tab="confidence">Data &amp; Methodology</button>
+</nav>
+
+<main class="tab-content">
+
+  <section class="tab-pane active" id="tab-overview">
+
+    <div class="panel wide-panel flood-evolution-panel">
+      <div class="panel-header"><h2>Flood Evolution — August 2022</h2></div>
+      <p class="muted" style="margin-top:0;">Flood conditions evolve over time — the platform integrates
+      observations across the event rather than a single static map. Click a date.</p>
+      <div class="evolution-stepper" id="evolution-stepper"></div>
+    </div>
+
+    <div class="overview-grid">
+
+      <aside class="col-left">
+        <div class="panel">
+          <div class="panel-header"><h2>Map Layers</h2></div>
+          <div id="layer-groups"></div>
+          <div class="legend">
+            <span class="tag tag-observed">OBSERVED</span>
+            <span class="tag tag-historical">HISTORICAL</span>
+            <span class="tag tag-derived">DERIVED</span>
+            <span class="tag tag-reference">REFERENCE</span>
+            <span class="tag tag-pending">PENDING</span>
+          </div>
+        </div>
+      </aside>
+
+      <div class="col-map">
+        <div id="map"></div>
+      </div>
+
+      <aside class="col-right">
+        <div class="panel">
+
+          <div class="panel-header"><h2>Select Forecast Site / Gauge</h2></div>
+          <p class="muted small" style="margin-top:-4px;">Available CWC monitoring stations (58, Mahanadi Basin). Naraj is the current SAR demonstration site — architecture supports adding further stations/sites without redesign.</p>
+          <div id="station-select"></div>
+          <canvas id="wl-chart" height="150"></canvas>
+          <p class="chart-caption" id="wl-chart-caption"></p>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><h2>Event Evidence</h2></div>
+          <div id="event-detail"><p class="muted">Select a date on the timeline.</p></div>
+        </div>
+
+        <div class="panel result-panel">
+          <div class="panel-header"><h2>Flood Analysis Result <span class="tag tag-derived">DERIVED</span></h2></div>
+          <div id="analysis-result-summary"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><h2>NDEM Inundated Area <span class="tag tag-derived">DERIVED</span></h2></div>
+          <div id="ndem-area-panel"></div>
+        </div>
+      </aside>
+
+    </div>
+  </section>
+
+  <section class="tab-pane" id="tab-sar">
+    <div class="panel wide-panel">
+      <div class="panel-header"><h2>SAR Analysis — Four-Stage Story</h2></div>
+      <p class="muted" style="margin-top:0;">
+        Calibrated, geocoded Sentinel-1 sigma0. <strong>Darker is not automatically water</strong> —
+        this is backscatter intensity, not a flood classification. Step through the stages below.
+      </p>
+      <div class="sar-stage-tabs" id="sar-stage-tabs">
+        <button class="stage-btn active" data-stage="preflood">1. Pre-Flood (6-Aug)</button>
+        <button class="stage-btn" data-stage="duringflood">2. During-Flood (18-Aug)</button>
+        <button class="stage-btn" data-stage="change">3. SAR Change</button>
+        <button class="stage-btn" data-stage="candidate">4. Candidate Inundation</button>
+      </div>
+      <div class="sar-pol-toggle" id="sar-pol-toggle">
+        <button class="pol-btn active" data-pol="vv">VV</button>
+        <button class="pol-btn" data-pol="vh">VH</button>
+      </div>
+      <div class="sar-stage-viewer">
+        <img id="sar-stage-img" class="sar-stage-image" src="" alt="SAR stage" />
+      </div>
+      <p class="sar-stage-caption" id="sar-stage-caption"></p>
+    </div>
+
+    <div class="panel wide-panel">
+      <div class="panel-header">
+        <h2>Pre/During-Flood Raw Data Sanity Check</h2>
+      </div>
+      <p class="muted" style="margin-top:0;">
+        Raw digital numbers (uncalibrated), for visual reference only — predates calibration.
+      </p>
+      <div class="sar-compare-wrap">
+        <div class="sar-slider-container" id="sar-slider-container">
+          <img src="data/sentinel1/naraj_crop_06aug_vv.png" class="sar-img sar-img-before" id="sar-img-before" />
+          <div class="sar-img-after-wrap" id="sar-img-after-wrap">
+            <img src="data/sentinel1/naraj_crop_18aug_vv.png" class="sar-img sar-img-after" id="sar-img-after" />
+          </div>
+          <div class="sar-slider-handle" id="sar-slider-handle"></div>
+        </div>
+        <input type="range" id="sar-slider" min="0" max="100" value="50" class="sar-range" />
+        <div class="sar-labels"><span>6-Aug-2022 (pre-flood)</span><span>18-Aug-2022 (during-flood)</span></div>
+      </div>
+      <div class="sar-mode-toggle">
+        <button id="sar-mode-swipe" class="mode-btn active">Swipe</button>
+        <button id="sar-mode-opacity" class="mode-btn">Opacity blend</button>
+      </div>
+    </div>
+
+    <div class="s1-cards-row" id="s1-cards"></div>
+
+    <div class="panel wide-panel">
+      <div class="panel-header"><h2>SAR Candidate Flood Mask <span class="tag tag-derived">DERIVED</span></h2></div>
+      <p class="muted" style="margin-top:0;">
+        Generated independently from calibrated Sentinel-1 VV+VH change detection (6-Aug → 18-Aug),
+        not copied from or fitted to the NDEM reference.
+      </p>
+      <div id="sar-mask-summary"></div>
+    </div>
+
+    <div class="panel wide-panel why-flagged-panel">
+      <div class="panel-header collapsible" id="why-flagged-toggle">
+        <h2>Why was this area flagged? <span class="tag tag-derived">Explain result</span></h2>
+        <span class="chevron" id="why-flagged-chevron">▸</span>
+      </div>
+      <div id="why-flagged-content" class="collapsible-body hidden"></div>
+    </div>
+  </section>
+
+  <section class="tab-pane" id="tab-validation">
+    <div class="panel wide-panel">
+      <div class="panel-header"><h2>SAR Candidate vs. NDEM Reference <span class="tag tag-reference">REFERENCE-BASED</span></h2></div>
+      <p class="muted" style="margin-top:0;">
+        NDEM historical inundation is used here only to <strong>evaluate</strong> the independently-generated
+        SAR candidate mask — it was not used to create it. Metrics computed only within the ~65% of the AOI
+        actually covered by both Sentinel-1 scenes.
+      </p>
+      <div class="validation-map-wrap">
+        <img id="validation-map-img" class="validation-map-image" src="data/sar_flood/sar_ndem_agreement.png" alt="SAR vs NDEM agreement map" />
+      </div>
+      <div class="validation-legend">
+        <span class="val-legend-item"><span class="val-swatch" style="background:#0f6b78"></span>Agreement (SAR ∩ NDEM)</span>
+        <span class="val-legend-item"><span class="val-swatch" style="background:#a4271f"></span>SAR candidate only</span>
+        <span class="val-legend-item"><span class="val-swatch" style="background:#c2760c"></span>NDEM reference only</span>
+      </div>
+      <p class="muted small" style="margin-top:6px;">Disagreement is shown, not hidden — this is where the
+      prototype's current precision limitations are visible directly on the map.</p>
+    </div>
+
+    <div class="panel wide-panel">
+      <div class="panel-header"><h2>Prototype-Stage Spatial Agreement Metrics</h2></div>
+      <div id="sar-validation-summary"></div>
+    </div>
+  </section>
+
+  <section class="tab-pane" id="tab-terrain">
+    <div class="panel wide-panel">
+      <div class="panel-header"><h2>Relative Elevation Scenario <span class="tag tag-derived">DERIVED</span></h2></div>
+      <p class="muted" style="margin-top:0;" id="terrain-disclaimer"></p>
+      <div class="terrain-wrap">
+        <canvas id="terrain-canvas" width="600" height="525"></canvas>
+        <div class="terrain-controls">
+          <label for="terrain-slider">Relative elevation threshold (meters above the AOI's lowest point)</label>
+          <input type="range" id="terrain-slider" min="0" max="50" value="5" step="0.5" />
+          <div class="terrain-readout" id="terrain-readout">5.0 m above AOI minimum</div>
+          <p class="muted small">This is <strong>not</strong> a water-level-to-flood-depth prediction. The
+          scale is a relative terrain threshold, not a CWC gauge reading — the current demonstration does
+          <strong>not</strong> convert CWC gauge levels (meters) into absolute terrain elevation, because
+          that vertical-datum crosswalk is unresolved (see Data &amp; Methodology tab). This control
+          illustrates the DEM-threshold mechanism only, not a flood forecast for any given water level.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="tab-pane" id="tab-exposure">
+    <div class="panel wide-panel">
+      <div class="panel-header"><h2>Exposure &amp; Decision Support <span class="tag tag-pending">NEXT INTEGRATION LAYER</span></h2></div>
+      <p class="muted" style="margin-top:0;">
+        How a verified flood extent would connect to exposure/impact analysis, once that data
+        exists. No infrastructure, population, or economic-loss figures are shown here — none
+        have been obtained or verified in this project.
+      </p>
+      <img src="assets/exposure_flow_diagram.png" alt="Exposure flow: flood mask, spatial intersection, exposure data, affected assets or population, decision support" style="width:100%; max-width:420px; display:block; margin:0 auto; border:1px solid var(--line); border-radius:6px;" />
+      <div id="exposure-content"></div>
+    </div>
+  </section>
+
+  <section class="tab-pane" id="tab-confidence">
+    <div class="panel wide-panel">
+      <div class="panel-header"><h2>Data Confidence, Methodology &amp; Technical Status</h2></div>
+      <p class="muted" style="margin-top:0;">
+        What's verified against source data, what's derived from it, and what genuinely remains
+        outstanding: 18-Aug noise correction, the approximate (GCP-TPS, not full terrain-correction)
+        geocoding method, the ~65% SAR coverage extent, the unoptimized 3 dB candidate threshold, and
+        the CWC-to-DEM vertical datum crosswalk. None of these block the candidate mask shown in the
+        SAR Analysis tab — they define its current precision, which is reported honestly there.
+      </p>
+      <div id="confidence-grid"></div>
+    </div>
+
+    <div class="panel wide-panel" id="architecture-panel">
+      <div class="panel-header"><h2>System Architecture &amp; Generalization</h2></div>
+      <p class="muted" style="margin-top:0;">
+        The pipeline is data-source-agnostic: swap in another station's CWC series, DEM tile, and
+        Sentinel-1 pair, and the same stages run. The <strong>only</strong> part of this diagram that
+        does not exist yet is the AI/ML layer at the bottom — <strong>explicitly future work</strong>,
+        not a claim about the current system.
+      </p>
+      <img src="assets/architecture_diagram.png" alt="System architecture: CWC + Sentinel-1 + DEM + NDEM feeds data harmonization, then SAR change detection, candidate flood generation, independent validation, decision-support outputs, and future multi-event/multi-site AI/ML layer" style="max-width:100%; border:1px solid var(--line); border-radius:6px;" />
+    </div>
+
+    <div class="panel wide-panel" id="aiml-panel">
+      <div class="panel-header"><h2>Next-Generation AI/ML Pipeline <span class="tag tag-pending">FUTURE WORK</span></h2></div>
+      <p class="muted" style="margin-top:0;">
+        The candidate mask shown in this prototype is a <strong>rule-based change-detection
+        result</strong>, not an AI/ML prediction. No trained model exists in this project. The
+        diagram below distinguishes the current demonstration from the future development path.
+      </p>
+      <img src="assets/aiml_roadmap_diagram.png" alt="AI/ML roadmap: current demonstration vs future multi-event data, data harmonization, SAR+CWC+DEM features, multi-event training data, AI/ML flood model, flood extent and confidence, decision support" style="max-width:420px; display:block; margin:0 auto; border:1px solid var(--line); border-radius:6px;" />
+    </div>
+
+    <div class="panel wide-panel">
+      <div class="panel-header collapsible" id="sources-toggle">
+        <h2>Full Dataset Provenance (expand for technical detail)</h2>
+        <span class="chevron" id="sources-chevron">▸</span>
+      </div>
+      <div id="data-sources" class="collapsible-body hidden"></div>
+    </div>
+  </section>
+
+
+</main>
+
+<footer class="app-footer">
+  Flood inundation analysis &amp; decision-support system — built only from verified datasets (CWC, SRTM,
+  NDEM/NRSC, Sentinel-1). Mahanadi Basin is the current demonstration case, not the system's scope.
+  No fabricated predictions, danger levels, or unvalidated accuracy figures are shown.
+</footer>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="vendor/chartjs/chart.umd.js"></script>
+<script src="research.js"></script>
+</body>
+</html>

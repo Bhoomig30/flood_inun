@@ -1,0 +1,44 @@
+[
+  {
+    "category": "River water level (Naraj)",
+    "status": "OBSERVED",
+    "detail": "Real CWC manual hourly gauge readings, 2021-2025, 21,257 observations for Naraj specifically.",
+    "source": "rwl_manual_hr_cwc_005_2021_2025.csv (user-supplied verified CWC dataset)",
+    "verified_in": "data_quality_report.md"
+  },
+  {
+    "category": "Digital Elevation Model",
+    "status": "OBSERVED",
+    "detail": "SRTM 1 arc-second (tile N20E085), USGS EarthExplorer, vertical datum EGM96 per USGS documentation. AOI-clipped view shown is a DERIVED color visualization for display; underlying elevation values are OBSERVED (real satellite radar altimetry).",
+    "source": "USGS EarthExplorer, Entity ID SRTM1N20E085V3",
+    "verified_in": "DATA_ACQUISITION_STATUS.md \u00a71A"
+  },
+  {
+    "category": "Naraj gauge location",
+    "status": "OBSERVED",
+    "detail": "Coordinates taken directly from the CWC dataset station record (20.471667N, 85.765556E), not estimated.",
+    "source": "rwl_manual_hr_cwc_005_2021_2025.csv",
+    "verified_in": "DATA_ACQUISITION_PLAN.md \u00a7A.1"
+  },
+  {
+    "category": "August 2022 historical inundation extent (16/18/19/21-Aug)",
+    "status": "HISTORICAL",
+    "detail": "Real NDEM/NRSC flood inundation polygons for the exact AOI and dates, spatially verified to intersect the Naraj AOI. Sourced via a third-party open (CC0) re-publication of official NDEM data, one step removed from the official Bhuvan portal.",
+    "source": "ndem.nrsc.gov.in, redistributed via github.com/ramSeraph/india_natural_disasters",
+    "verified_in": "DATA_ACQUISITION_STATUS.md \u00a73"
+  },
+  {
+    "category": "Sentinel-1 6-Aug and 18-Aug scene metadata",
+    "status": "OBSERVED",
+    "detail": "Platform, mode, product type, polarization, orbit, footprint all verified directly from each product's own manifest.safe and annotation XML. Raw pixel digital numbers are NOT interpreted as flood/water/land anywhere in this prototype.",
+    "source": "User-supplied Sentinel-1A SAFE product files, Copernicus Data Space Ecosystem",
+    "verified_in": "S1_18AUG2022_PIXEL_VALIDATION.md, SENTINEL_PRE_FLOOD_SCENE_COMPARISON.md"
+  },
+  {
+    "category": "Sentinel-1 calibrated flood mask (6-Aug \u2192 18-Aug)",
+    "status": "DERIVED",
+    "detail": "A candidate flood mask has been produced from calibrated Sentinel-1 6-Aug/18-Aug VV+VH change detection (67.89 km2 within SAR coverage), generated independently of NDEM and then validated against it (IoU=0.14, F1=0.24 -- prototype-stage metrics). 18-Aug noise correction and full SAR terrain correction remain outstanding refinements -- see Data & Methodology.",
+    "source": "Derived from verified Sentinel-1 6-Aug/18-Aug SAFE products",
+    "verified_in": "SAR_CALIBRATION_EXECUTION_REPORT.md, SAR_FLOOD_DETECTION_REPORT.md"
+  }
+]

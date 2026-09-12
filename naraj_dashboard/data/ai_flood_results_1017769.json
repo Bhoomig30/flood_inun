@@ -1,0 +1,19 @@
+﻿{
+  "scene_id": "1017769",
+  "model": "Random Forest",
+  "features": 12,
+  "threshold": 0.65,
+  "flood_percentage": 40.57,
+  "flood_pixels": 106364,
+  "total_pixels": 262144,
+  "polygons": 1210,
+  "validation": {
+    "accuracy": 0.9229,
+    "precision": 0.9547,
+    "recall": 0.9072,
+    "f1": 0.9304,
+    "iou": 0.8698,
+    "false_positive_rate": 0.0564,
+    "false_negative_rate": 0.0928
+  }
+}

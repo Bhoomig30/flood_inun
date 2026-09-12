@@ -1,0 +1,109 @@
+{
+  "study_area": "Naraj/Mahanadi",
+  "events": [
+    {
+      "id": "ndem_16aug",
+      "date": "2022-08-16",
+      "target_time_utc": "2022-08-16T00:00:00",
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2022-08-16T00:00:00",
+        "water_level_m": 24.8,
+        "source": "rwl_manual_hr_cwc_005_2021_2025.csv"
+      },
+      "ndem_inundation": {
+        "status": "HISTORICAL",
+        "available": true,
+        "file": "data/ndem/ndem_16aug.geojson",
+        "source": "NDEM (ndem.nrsc.gov.in), redistributed via ramSeraph/india_natural_disasters (GitHub, CC0)",
+        "note": "Government-sourced historical inundation extent, one processing step removed from the official Bhuvan portal (see DATA_ACQUISITION_STATUS.md)"
+      },
+      "satellite_evidence": {
+        "status": "NO SAR COVERAGE",
+        "detail": "No Sentinel-1 acquisition for this exact date in this prototype. SAR analysis (calibration, change detection, candidate mask) is currently demonstrated for the 6-Aug/18-Aug pair only."
+      },
+      "flood_mask_sar_derived": {
+        "status": "NO SAR COVERAGE",
+        "detail": "No SAR-derived candidate mask for this date. The candidate mask exists only for 18-Aug-2022 (see that event)."
+      }
+    },
+    {
+      "id": "ndem_18aug",
+      "date": "2022-08-18",
+      "target_time_utc": "2022-08-18T18:00:00",
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2022-08-18T18:00:00",
+        "water_level_m": 26.98,
+        "source": "rwl_manual_hr_cwc_005_2021_2025.csv"
+      },
+      "ndem_inundation": {
+        "status": "HISTORICAL",
+        "available": true,
+        "file": "data/ndem/ndem_18aug.geojson",
+        "source": "NDEM (ndem.nrsc.gov.in), redistributed via ramSeraph/india_natural_disasters (GitHub, CC0)",
+        "note": "Government-sourced historical inundation extent, one processing step removed from the official Bhuvan portal (see DATA_ACQUISITION_STATUS.md)"
+      },
+      "satellite_evidence": {
+        "status": "OBSERVED",
+        "detail": "Sentinel-1A 18-Aug-2022 scene metadata verified (see Sentinel-1 panel); raw digital numbers only, NOT a flood classification"
+      },
+      "flood_mask_sar_derived": {
+        "status": "DERIVED",
+        "detail": "SAR candidate flood mask produced (67.89 km2 within SAR coverage). Validated vs NDEM: IoU=0.14, F1=0.24 (prototype-stage, not operational accuracy)."
+      }
+    },
+    {
+      "id": "ndem_19aug",
+      "date": "2022-08-19",
+      "target_time_utc": "2022-08-19T18:00:00",
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2022-08-19T18:00:00",
+        "water_level_m": 26.71,
+        "source": "rwl_manual_hr_cwc_005_2021_2025.csv"
+      },
+      "ndem_inundation": {
+        "status": "HISTORICAL",
+        "available": true,
+        "file": "data/ndem/ndem_19aug.geojson",
+        "source": "NDEM (ndem.nrsc.gov.in), redistributed via ramSeraph/india_natural_disasters (GitHub, CC0)",
+        "note": "Government-sourced historical inundation extent, one processing step removed from the official Bhuvan portal (see DATA_ACQUISITION_STATUS.md)"
+      },
+      "satellite_evidence": {
+        "status": "NO SAR COVERAGE",
+        "detail": "No Sentinel-1 acquisition for this exact date in this prototype. SAR analysis (calibration, change detection, candidate mask) is currently demonstrated for the 6-Aug/18-Aug pair only."
+      },
+      "flood_mask_sar_derived": {
+        "status": "NO SAR COVERAGE",
+        "detail": "No SAR-derived candidate mask for this date. The candidate mask exists only for 18-Aug-2022 (see that event)."
+      }
+    },
+    {
+      "id": "ndem_21aug",
+      "date": "2022-08-21",
+      "target_time_utc": "2022-08-21T06:00:00",
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2022-08-21T06:00:00",
+        "water_level_m": 26.35,
+        "source": "rwl_manual_hr_cwc_005_2021_2025.csv"
+      },
+      "ndem_inundation": {
+        "status": "HISTORICAL",
+        "available": true,
+        "file": "data/ndem/ndem_21aug.geojson",
+        "source": "NDEM (ndem.nrsc.gov.in), redistributed via ramSeraph/india_natural_disasters (GitHub, CC0)",
+        "note": "Government-sourced historical inundation extent, one processing step removed from the official Bhuvan portal (see DATA_ACQUISITION_STATUS.md)"
+      },
+      "satellite_evidence": {
+        "status": "NO SAR COVERAGE",
+        "detail": "No Sentinel-1 acquisition for this exact date in this prototype. SAR analysis (calibration, change detection, candidate mask) is currently demonstrated for the 6-Aug/18-Aug pair only."
+      },
+      "flood_mask_sar_derived": {
+        "status": "NO SAR COVERAGE",
+        "detail": "No SAR-derived candidate mask for this date. The candidate mask exists only for 18-Aug-2022 (see that event)."
+      }
+    }
+  ]
+}

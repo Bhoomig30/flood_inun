@@ -1,0 +1,1 @@
+{"type": "FeatureCollection", "properties": {"source": "CWC dataset rwl_manual_hr_cwc_005_2021_2025.csv, Naraj station record"}, "features": [{"type": "Feature", "properties": {"name": "Naraj", "state": "Odisha", "district": "Cuttack", "river": "Mahanadi", "rl_of_zero_gauge": 0.0, "mean_sea_level": 12.0}, "geometry": {"type": "Point", "coordinates": [85.765556, 20.471667]}}]}

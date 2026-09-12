@@ -1,0 +1,57 @@
+[
+  {
+    "item": "CWC water-level data (Naraj, Alipingal, Nimapara + 55 more stations)",
+    "status": "VERIFIED",
+    "detail": "Real manual hourly gauge readings, 2021-2025, read directly from the supplied CWC CSV."
+  },
+  {
+    "item": "SRTM DEM (tile N20E085)",
+    "status": "VERIFIED",
+    "detail": "Downloaded by user from USGS EarthExplorer, integrity/CRS/resolution/coverage independently verified."
+  },
+  {
+    "item": "Sentinel-1A 6-Aug-2022 scene (pre-flood)",
+    "status": "VERIFIED",
+    "detail": "Manifest, annotation, calibration, noise and RFI files all verified genuine and matching this exact product."
+  },
+  {
+    "item": "Sentinel-1A 18-Aug-2022 scene (during-flood)",
+    "status": "VERIFIED",
+    "detail": "Manifest, annotation, and measurement pixel data verified genuine for this exact product."
+  },
+  {
+    "item": "NDEM/NRSC historical inundation layers (16/18/19/21-Aug-2022)",
+    "status": "VERIFIED",
+    "detail": "Government-sourced flood extent polygons, spatially confirmed to intersect the Naraj AOI."
+  },
+  {
+    "item": "18-Aug Sentinel-1 noise correction (NESZ)",
+    "status": "PENDING",
+    "detail": "Radiometric calibration to sigma0 IS complete for both 6-Aug and 18-Aug (verified product-specific LUTs). Noise (NESZ) subtraction was additionally demonstrated for 6-Aug, but the 18-Aug noise LUT is no longer available (lost to a filename collision after verification). The candidate mask uses the consistent, non-noise-corrected pair for both dates rather than mixing processing levels."
+  },
+  {
+    "item": "CWC-to-DEM vertical datum crosswalk",
+    "status": "PENDING",
+    "detail": "The vertical reference behind the CWC gauge fields (RL_of_zeroGauge, MeanSeaLevel) has not been reconciled with the SRTM DEM's EGM96 datum. No gauge reading is converted to an absolute terrain elevation anywhere in this prototype -- the Terrain Scenario tab uses relative elevation only."
+  },
+  {
+    "item": "Sentinel-1 calibrated flood mask (6-Aug -> 18-Aug)",
+    "status": "DERIVED",
+    "detail": "A candidate flood mask HAS been produced (18-Aug), using calibrated, geocoded, co-registered Sentinel-1 VV+VH change detection (>=3dB drop in both bands, spatially filtered). Validated against the verified NDEM 18-Aug reference within the SAR valid-coverage area: IoU=0.14, Precision=0.15, Recall=0.66, F1=0.24. These are real, calculated prototype-stage metrics, not a validated operational accuracy figure -- precision is low, meaning the candidate mask currently over-detects (see Data & Methodology for why). Noise (NESZ) correction was successfully demonstrated for 6-Aug but could not be applied consistently to 18-Aug in this pass (LUT file no longer available -- see SAR_FLOOD_DETECTION_REPORT.md); the mask therefore uses the non-noise-corrected pair for methodological consistency between dates."
+  },
+  {
+    "item": "Geocoding method",
+    "status": "DERIVED",
+    "detail": "SAR rasters are geocoded using a GCP-based thin-plate-spline warp (GDAL), not full SAR range-Doppler terrain correction -- this environment has no SAR-specific processing toolkit (e.g. ESA SNAP). A reasonable approximation given the AOI's flat terrain, but not verified to true RTC accuracy."
+  },
+  {
+    "item": "SAR spatial coverage",
+    "status": "DERIVED",
+    "detail": "The 6-Aug/18-Aug same-orbit pair covers ~65% of the defined AOI. SAR-based analysis (change detection, candidate mask) is restricted to this valid-coverage area; the remaining ~35% is shown as 'no SAR coverage', never treated as 'not flooded'."
+  },
+  {
+    "item": "Candidate mask threshold (3 dB)",
+    "status": "DERIVED",
+    "detail": "A literature-consistent starting threshold, not an optimized or validated value for this site. A full sensitivity analysis (1-6 dB) is available in SAR_FLOOD_DETECTION_REPORT.md, showing candidate area ranges from 220 km2 (1dB) down to 26 km2 (6dB)."
+  }
+]
