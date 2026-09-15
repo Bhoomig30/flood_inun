@@ -484,3 +484,514 @@ html, body {
     font-size: 14px;
     font-weight: 600;
 }
+
+.forecast-summary {
+    margin: 10px 0 14px;
+    padding: 12px 14px;
+    border: 1px solid #d9e2e8;
+    border-radius: 10px;
+    background: #f7fafb;
+}
+
+.forecast-summary-label {
+    font-size: 12px;
+    color: #5f6f78;
+}
+
+.forecast-observed {
+    margin: 0 0 14px;
+    padding: 10px 14px;
+    border-left: 3px solid #1769aa;
+    background: #f7fafb;
+    font-size: 12.5px;
+    line-height: 1.6;
+}
+
+.forecast-model-info {
+    margin: 14px 0 0;
+    padding: 10px;
+    border-left: 3px solid #0f6b78;
+    background: #f7fafb;
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+.forecast-scope {
+    margin-top: 8px;
+    font-size: 11px;
+    color: #66757d;
+    line-height: 1.45;
+}
+
+.forecast-status {
+    padding: 9px 12px;
+    border-radius: 8px;
+    background: #f1f6f9;
+    color: #123b5d;
+    font-size: 12.5px;
+    margin-bottom: 12px;
+}
+
+/* --- Station picker ------------------------------------------------- */
+.forecast-station-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.forecast-station-label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #123b5d;
+}
+
+.forecast-station-select {
+    font: inherit;
+    font-size: 13px;
+    color: #123b5d;
+    background: #fff;
+    border: 1px solid #b9cddc;
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.forecast-station-select:hover {
+    border-color: #1769aa;
+}
+
+.forecast-station-select:focus-visible {
+    outline: 2px solid #1769aa;
+    outline-offset: 1px;
+    border-color: #1769aa;
+}
+
+.forecast-ml-note {
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 3px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.forecast-ml-note.on {
+    background: rgba(23, 105, 170, 0.1);
+    color: #114f80;
+    border: 1px solid rgba(23, 105, 170, 0.35);
+}
+
+.forecast-ml-note.off {
+    background: #f1f3f5;
+    color: #5c6a75;
+    border: 1px solid #d5dde3;
+}
+
+@media (max-width: 640px) {
+    .forecast-station-select {
+        flex: 1 1 100%;
+    }
+}
+
+.forecast-observation {
+    margin-top: 14px;
+    padding: 10px 14px;
+    border-left: 3px solid #1769aa;
+    background: #f7fafb;
+    font-size: 12.5px;
+    line-height: 1.6;
+}
+
+.overall-flood-risk {
+    margin: 14px 0;
+    padding: 14px 16px;
+    border: 1px solid #d9e2e8;
+    border-radius: 10px;
+    background: #f7fafb;
+}
+
+.overall-risk-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #5f6f78;
+}
+
+.overall-risk-value {
+    font-size: 24px;
+    font-weight: 700;
+    margin: 4px 0;
+    font-family: "IBM Plex Mono", monospace;
+}
+
+.overall-risk-details {
+    font-size: 12px;
+    color: #5f6f78;
+}
+
+/* ---- Forecast bars (v2 UI) ---- */
+
+.forecast-item-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.forecast-ml-badge {
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    padding: 2px 7px;
+    border-radius: 10px;
+    background: rgba(15, 107, 120, 0.1);
+    color: #0f6b78;
+    white-space: nowrap;
+}
+
+.forecast-bar {
+    height: 8px;
+    border-radius: 5px;
+    background: #e4ebee;
+    overflow: hidden;
+}
+
+.forecast-bar-fill {
+    height: 100%;
+    border-radius: 5px;
+    transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.forecast-bar-fill.risk-low {
+    background: linear-gradient(90deg, #2e9e57, #1a7f37);
+}
+
+.forecast-bar-fill.risk-medium {
+    background: linear-gradient(90deg, #e0a13a, #b45309);
+}
+
+.forecast-bar-fill.risk-high {
+    background: linear-gradient(90deg, #d9534f, #b91c1c);
+}
+
+/* ---- Forecast cone chart ---- */
+
+.forecast-cone-wrap {
+    margin-top: 18px;
+    padding: 14px;
+    border: 1px solid #d9e2e8;
+    border-radius: 10px;
+    background: #fcfdfe;
+}
+
+.forecast-cone-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    color: #123b5d;
+}
+
+.forecast-cone-note {
+    font-size: 11px;
+    color: #66757d;
+}
+
+.forecast-cone-canvas-wrap {
+    position: relative;
+    height: 230px;
+}
+
+/* ---- Forecast action buttons ---- */
+
+.forecast-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.forecast-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 14px;
+    border: 1px solid #c6d3da;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #123b5d;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: border-color 0.15s, background 0.15s, transform 0.05s;
+}
+
+.forecast-action-btn:hover {
+    border-color: #0f6b78;
+    color: #0f6b78;
+    background: #f4fafb;
+}
+
+.forecast-action-btn:active {
+    transform: translateY(1px);
+}
+
+.forecast-action-btn:focus-visible {
+    outline: 2px solid #1769aa;
+    outline-offset: 2px;
+}
+
+/* ---- Model info panel ---- */
+
+.model-info-panel {
+    margin-top: 12px;
+    padding: 14px 16px;
+    border: 1px solid #d9e2e8;
+    border-left: 3px solid #0f6b78;
+    border-radius: 10px;
+    background: #f7fafb;
+    font-size: 12.5px;
+    line-height: 1.55;
+}
+
+.model-info-panel.hidden {
+    display: none;
+}
+
+.model-info-panel h4 {
+    margin: 0 0 8px;
+    font-size: 13px;
+    color: #123b5d;
+}
+
+.model-info-row {
+    margin: 5px 0;
+}
+
+.model-skill-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0;
+    font-size: 12px;
+}
+
+.model-skill-table th,
+.model-skill-table td {
+    border: 1px solid #d9e2e8;
+    padding: 5px 8px;
+    text-align: left;
+}
+
+.model-skill-table th {
+    background: #eef4f7;
+    font-weight: 600;
+    color: #123b5d;
+}
+
+.model-note {
+    margin: 6px 0 0;
+}
+
+/* ---- Accessibility & print ---- */
+
+.muted.small {
+    color: #5f6f78;
+}
+
+/* ---- Header uplift (appended: wins over public.css) ---- */
+
+.pub-header {
+    background: linear-gradient(135deg, #07223a 0%, #0b3350 55%, #0f4c62 100%);
+    border-bottom: 3px solid #0f6b78;
+    padding: 20px 28px;
+}
+
+.pub-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 24px;
+    color: #ffffff;
+    letter-spacing: -0.02em;
+}
+
+.pub-logo-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #0f6b78, #1769aa);
+    color: #ffffff;
+    font-size: 17px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.pub-tagline {
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 13px;
+}
+
+.pub-research-link {
+    color: #7fd1dc;
+    border-color: rgba(127, 209, 220, 0.55);
+}
+
+.pub-research-link:hover {
+    background: rgba(127, 209, 220, 0.12);
+}
+
+@media (max-width: 640px) {
+
+    .pub-header {
+        padding: 16px 18px;
+    }
+
+    .pub-logo {
+        font-size: 20px;
+    }
+
+    .pub-tagline {
+        display: none;
+    }
+
+}
+
+@media print {
+
+    .pub-nav,
+    .location-tools,
+    .forecast-actions,
+    .app-header .back-to-public-link {
+        display: none !important;
+    }
+
+    .ai-forecast-card,
+    .forecast-cone-wrap {
+        box-shadow: none;
+        page-break-inside: avoid;
+    }
+
+    body {
+        background: #ffffff;
+    }
+}
+
+.forecast-risk.risk-low {
+    color: #1a7f37;
+}
+
+.forecast-risk.risk-medium {
+    color: #b45309;
+}
+
+.forecast-risk.risk-high {
+    color: #b91c1c;
+}
+
+.overall-risk-value.low {
+    color: #1a7f37;
+}
+
+.overall-risk-value.moderate {
+    color: #b45309;
+}
+
+.overall-risk-value.high {
+    color: #b91c1c;
+}
+
+.overall-risk-value.unknown {
+    color: #5f6f78;
+}
+
+/* ==========================================================================
+   UI POLISH LAYER (v4) — cohesive elevation, spacing and motion for the
+   forecast dashboard. Appended last so it wins the cascade.
+   ========================================================================== */
+
+:root {
+  --shadow-xs: 0 1px 2px rgba(7, 31, 51, 0.06);
+  --shadow-sm: 0 1px 3px rgba(7, 31, 51, 0.08), 0 1px 2px rgba(7, 31, 51, 0.04);
+  --shadow-md: 0 4px 14px rgba(7, 31, 51, 0.09), 0 2px 4px rgba(7, 31, 51, 0.05);
+  --shadow-lg: 0 12px 32px rgba(7, 31, 51, 0.14), 0 4px 8px rgba(7, 31, 51, 0.06);
+  --radius: 12px;
+  --radius-lg: 16px;
+}
+
+body {
+  background:
+    radial-gradient(1200px 500px at 85% -140px, rgba(15, 107, 120, 0.08), transparent 60%),
+    radial-gradient(900px 420px at -10% -80px, rgba(11, 51, 80, 0.07), transparent 55%);
+  background-attachment: fixed;
+}
+
+/* ---- Forecast cards: elevation + motion ---------------------------------- */
+.forecast-card,
+.forecast-item,
+.ai-forecast-card {
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.forecast-card:hover,
+.forecast-item:hover,
+.ai-forecast-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+
+.forecast-bar {
+  border-radius: 999px;
+  overflow: hidden;
+}
+.forecast-bar-fill { transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1); }
+
+.overall-risk-value {
+  display: inline-block;
+  padding: 4px 14px;
+  border-radius: 999px;
+  letter-spacing: 0.03em;
+}
+.overall-risk-value.low { background: rgba(14, 138, 109, 0.1); }
+.overall-risk-value.moderate { background: rgba(194, 118, 12, 0.12); }
+.overall-risk-value.high { background: rgba(164, 39, 31, 0.1); }
+
+.forecast-ml-note {
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-weight: 600;
+}
+.forecast-ml-note.on { box-shadow: 0 1px 6px rgba(15, 107, 120, 0.3); }
+
+/* ---- Model & skill table -------------------------------------------------- */
+.model-skill-table {
+  border-radius: var(--radius-sm, 8px);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+}
+.model-skill-table th {
+  background: rgba(11, 51, 80, 0.05);
+}
+
+/* ---- Inputs ---------------------------------------------------------------- */
+input:focus-visible,
+select:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--teal, #0f6b78);
+  outline-offset: 2px;
+}
+
+/* ---- Motion hygiene -------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .forecast-card,
+  .ai-forecast-card,
+  .forecast-bar-fill { transition: none !important; transform: none !important; }
+}

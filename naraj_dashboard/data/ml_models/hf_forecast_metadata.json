@@ -1,0 +1,436 @@
+{
+  "version": 3,
+  "project": "FloodWatch",
+  "trained_at": "2026-09-13T15:30:02.482749+00:00",
+  "model_type": "RandomForestClassifier + sigmoid calibration",
+  "task": "future flood forecasting (probability that Naraj exceeds danger level)",
+  "data_source": {
+    "huggingface_dataset": "bhoomig0630/flood-inundation-upload",
+    "huggingface_file": "ml/data/forecast/forecast_dataset.csv",
+    "github_repo": "https://github.com/Bhoomig30/flood_inun",
+    "build_script": "ml/src/build_forecast_dataset.py",
+    "raw_inputs": "CWC India 2021-2025: 10 rain gauges + Naraj/Alipingal/Nimapara water levels",
+    "synthetic_data": false
+  },
+  "dataset": {
+    "rows": 43800,
+    "features": 71,
+    "start": "2021-01-01 00:00:00",
+    "end": "2025-12-30 23:00:00",
+    "flood_threshold_m": 24.28,
+    "flood_threshold_rule": "Naraj 95th percentile of 2021-2025 hourly record"
+  },
+  "features": [
+    "rain_1_mm",
+    "rain_2_mm",
+    "rain_3_mm",
+    "rain_4_mm",
+    "rain_5_mm",
+    "rain_6_mm",
+    "rain_7_mm",
+    "rain_8_mm",
+    "rain_9_mm",
+    "rain_10_mm",
+    "naraj_water_level_m",
+    "alipingal_water_level_m",
+    "nimapara_water_level_m",
+    "rainfall_mean_mm",
+    "rainfall_max_mm",
+    "rainfall_1h",
+    "rainfall_3h",
+    "rainfall_6h",
+    "rainfall_12h",
+    "rainfall_24h",
+    "rainfall_intensity_3h",
+    "rainfall_intensity_24h",
+    "naraj_water_level_m_lag_1h",
+    "naraj_water_level_m_lag_3h",
+    "naraj_water_level_m_lag_6h",
+    "naraj_water_level_m_lag_12h",
+    "naraj_water_level_m_lag_24h",
+    "naraj_water_level_m_change_3h",
+    "naraj_water_level_m_change_6h",
+    "naraj_water_level_m_change_12h",
+    "naraj_water_level_m_change_24h",
+    "naraj_water_level_m_rolling_3h",
+    "naraj_water_level_m_rolling_6h",
+    "naraj_water_level_m_rolling_12h",
+    "naraj_water_level_m_rolling_24h",
+    "alipingal_water_level_m_lag_1h",
+    "alipingal_water_level_m_lag_3h",
+    "alipingal_water_level_m_lag_6h",
+    "alipingal_water_level_m_lag_12h",
+    "alipingal_water_level_m_lag_24h",
+    "alipingal_water_level_m_change_3h",
+    "alipingal_water_level_m_change_6h",
+    "alipingal_water_level_m_change_12h",
+    "alipingal_water_level_m_change_24h",
+    "alipingal_water_level_m_rolling_3h",
+    "alipingal_water_level_m_rolling_6h",
+    "alipingal_water_level_m_rolling_12h",
+    "alipingal_water_level_m_rolling_24h",
+    "nimapara_water_level_m_lag_1h",
+    "nimapara_water_level_m_lag_3h",
+    "nimapara_water_level_m_lag_6h",
+    "nimapara_water_level_m_lag_12h",
+    "nimapara_water_level_m_lag_24h",
+    "nimapara_water_level_m_change_3h",
+    "nimapara_water_level_m_change_6h",
+    "nimapara_water_level_m_change_12h",
+    "nimapara_water_level_m_change_24h",
+    "nimapara_water_level_m_rolling_3h",
+    "nimapara_water_level_m_rolling_6h",
+    "nimapara_water_level_m_rolling_12h",
+    "nimapara_water_level_m_rolling_24h",
+    "regional_water_level_m",
+    "regional_water_level_change_6h",
+    "regional_water_level_change_24h",
+    "hour",
+    "day_of_year",
+    "month",
+    "hour_sin",
+    "hour_cos",
+    "month_sin",
+    "month_cos"
+  ],
+  "split": {
+    "method": "chronological",
+    "train": 0.7,
+    "validation": 0.15,
+    "test": 0.15,
+    "periods": {
+      "train": "2021-01-01 00:00:00 -> 2024-07-01 10:00:00",
+      "val": "2024-07-01 11:00:00 -> 2025-04-01 05:00:00",
+      "test": "2025-04-01 06:00:00 -> 2025-12-30 23:00:00"
+    }
+  },
+  "models": {
+    "6h": {
+      "target": "flood_next_6h",
+      "bundle": "hf_forecast_6h.pkl",
+      "cv_brier_folds_train_window": [
+        0.0333,
+        0.0024,
+        0.0028
+      ],
+      "validation": {
+        "rows": 6571,
+        "positives": 409,
+        "brier": 0.0054,
+        "mean_predicted_p": 0.0622,
+        "roc_auc": 0.9992,
+        "pr_auc": 0.9889,
+        "precision": 0.9692,
+        "f1": 0.9462,
+        "recall": 0.9242,
+        "hit_rate_at_HIGH": 0.923,
+        "false_alarm_mean_p_on_safe_hours": 0.0051,
+        "confusion_at_0.5": {
+          "tn": 6150,
+          "fp": 12,
+          "fn": 31,
+          "tp": 378
+        }
+      },
+      "test": {
+        "rows": 6570,
+        "positives": 755,
+        "brier": 0.0227,
+        "mean_predicted_p": 0.0933,
+        "roc_auc": 0.9921,
+        "pr_auc": 0.9736,
+        "precision": 0.987,
+        "f1": 0.8861,
+        "recall": 0.804,
+        "hit_rate_at_HIGH": 0.7885,
+        "false_alarm_mean_p_on_safe_hours": 0.0031,
+        "confusion_at_0.5": {
+          "tn": 5807,
+          "fp": 8,
+          "fn": 148,
+          "tp": 607
+        }
+      },
+      "top_features": [
+        {
+          "feature": "naraj_water_level_m_lag_1h",
+          "importance": 0.11551048865168838
+        },
+        {
+          "feature": "naraj_water_level_m_rolling_3h",
+          "importance": 0.09973881585692289
+        },
+        {
+          "feature": "naraj_water_level_m",
+          "importance": 0.09270136663235382
+        },
+        {
+          "feature": "naraj_water_level_m_lag_6h",
+          "importance": 0.0820750717630534
+        },
+        {
+          "feature": "naraj_water_level_m_lag_3h",
+          "importance": 0.07508992768107084
+        },
+        {
+          "feature": "naraj_water_level_m_rolling_6h",
+          "importance": 0.07427296785594613
+        },
+        {
+          "feature": "regional_water_level_m",
+          "importance": 0.05605176634091347
+        },
+        {
+          "feature": "naraj_water_level_m_rolling_12h",
+          "importance": 0.04512505579663244
+        },
+        {
+          "feature": "naraj_water_level_m_lag_12h",
+          "importance": 0.04510799998372331
+        },
+        {
+          "feature": "alipingal_water_level_m",
+          "importance": 0.039560505970132685
+        },
+        {
+          "feature": "naraj_water_level_m_rolling_24h",
+          "importance": 0.03909436379008052
+        },
+        {
+          "feature": "alipingal_water_level_m_rolling_3h",
+          "importance": 0.03863713121113008
+        },
+        {
+          "feature": "alipingal_water_level_m_lag_3h",
+          "importance": 0.021964809466716077
+        },
+        {
+          "feature": "alipingal_water_level_m_lag_1h",
+          "importance": 0.01976043705491544
+        },
+        {
+          "feature": "naraj_water_level_m_lag_24h",
+          "importance": 0.019026371323147665
+        }
+      ]
+    },
+    "12h": {
+      "target": "flood_next_12h",
+      "bundle": "hf_forecast_12h.pkl",
+      "cv_brier_folds_train_window": [
+        0.0346,
+        0.004,
+        0.005
+      ],
+      "validation": {
+        "rows": 6571,
+        "positives": 439,
+        "brier": 0.0092,
+        "mean_predicted_p": 0.0668,
+        "roc_auc": 0.9981,
+        "pr_auc": 0.9758,
+        "precision": 0.9416,
+        "f1": 0.9106,
+        "recall": 0.8815,
+        "hit_rate_at_HIGH": 0.8757,
+        "false_alarm_mean_p_on_safe_hours": 0.0089,
+        "confusion_at_0.5": {
+          "tn": 6108,
+          "fp": 24,
+          "fn": 52,
+          "tp": 387
+        }
+      },
+      "test": {
+        "rows": 6570,
+        "positives": 797,
+        "brier": 0.03,
+        "mean_predicted_p": 0.0924,
+        "roc_auc": 0.99,
+        "pr_auc": 0.9479,
+        "precision": 0.9868,
+        "f1": 0.8525,
+        "recall": 0.7503,
+        "hit_rate_at_HIGH": 0.7311,
+        "false_alarm_mean_p_on_safe_hours": 0.0042,
+        "confusion_at_0.5": {
+          "tn": 5765,
+          "fp": 8,
+          "fn": 199,
+          "tp": 598
+        }
+      },
+      "top_features": [
+        {
+          "feature": "naraj_water_level_m_lag_1h",
+          "importance": 0.1113500993305564
+        },
+        {
+          "feature": "naraj_water_level_m_rolling_3h",
+          "importance": 0.10031907073533093
+        },
+        {
+          "feature": "naraj_water_level_m",
+          "importance": 0.08833867732625868
+        },
+        {
+          "feature": "naraj_water_level_m_lag_6h",
+          "importance": 0.08315010734831073
+        },
+        {
+          "feature": "naraj_water_level_m_lag_3h",
+          "importance": 0.07900352697137333
+        },
+        {
+          "feature": "naraj_water_level_m_rolling_6h",
+          "importance": 0.07152060376721515
+        },
+        {
+          "feature": "naraj_water_level_m_lag_12h",
+          "importance": 0.05607190227278558
+        },
+        {
+          "feature": "naraj_water_level_m_rolling_12h",
+          "importance": 0.0482153682570512
+        },
+        {
+          "feature": "regional_water_level_m",
+          "importance": 0.04468213451620124
+        },
+        {
+          "feature": "alipingal_water_level_m",
+          "importance": 0.03878960194657802
+        },
+        {
+          "feature": "alipingal_water_level_m_rolling_3h",
+          "importance": 0.038493003137876416
+        },
+        {
+          "feature": "naraj_water_level_m_rolling_24h",
+          "importance": 0.03735317751466344
+        },
+        {
+          "feature": "alipingal_water_level_m_lag_3h",
+          "importance": 0.02410438069543014
+        },
+        {
+          "feature": "alipingal_water_level_m_lag_1h",
+          "importance": 0.019987391834272072
+        },
+        {
+          "feature": "naraj_water_level_m_lag_24h",
+          "importance": 0.015618921994332024
+        }
+      ]
+    },
+    "24h": {
+      "target": "flood_next_24h",
+      "bundle": "hf_forecast_24h.pkl",
+      "cv_brier_folds_train_window": [
+        0.0442,
+        0.006,
+        0.0078
+      ],
+      "validation": {
+        "rows": 6571,
+        "positives": 499,
+        "brier": 0.015,
+        "mean_predicted_p": 0.0759,
+        "roc_auc": 0.9961,
+        "pr_auc": 0.9568,
+        "precision": 0.8703,
+        "f1": 0.8516,
+        "recall": 0.8337,
+        "hit_rate_at_HIGH": 0.8214,
+        "false_alarm_mean_p_on_safe_hours": 0.0147,
+        "confusion_at_0.5": {
+          "tn": 6010,
+          "fp": 62,
+          "fn": 83,
+          "tp": 416
+        }
+      },
+      "test": {
+        "rows": 6570,
+        "positives": 881,
+        "brier": 0.0418,
+        "mean_predicted_p": 0.093,
+        "roc_auc": 0.9825,
+        "pr_auc": 0.9154,
+        "precision": 0.9869,
+        "f1": 0.8083,
+        "recall": 0.6844,
+        "hit_rate_at_HIGH": 0.6622,
+        "false_alarm_mean_p_on_safe_hours": 0.0048,
+        "confusion_at_0.5": {
+          "tn": 5681,
+          "fp": 8,
+          "fn": 278,
+          "tp": 603
+        }
+      },
+      "top_features": [
+        {
+          "feature": "naraj_water_level_m_lag_1h",
+          "importance": 0.10629143772508863
+        },
+        {
+          "feature": "naraj_water_level_m_rolling_3h",
+          "importance": 0.10556815758439382
+        },
+        {
+          "feature": "naraj_water_level_m",
+          "importance": 0.09922106626441293
+        },
+        {
+          "feature": "naraj_water_level_m_lag_6h",
+          "importance": 0.07978000333184475
+        },
+        {
+          "feature": "naraj_water_level_m_lag_3h",
+          "importance": 0.07755968296877033
+        },
+        {
+          "feature": "naraj_water_level_m_rolling_6h",
+          "importance": 0.06561820906054862
+        },
+        {
+          "feature": "regional_water_level_m",
+          "importance": 0.05980886494278826
+        },
+        {
+          "feature": "naraj_water_level_m_lag_12h",
+          "importance": 0.042355249226198134
+        },
+        {
+          "feature": "alipingal_water_level_m",
+          "importance": 0.039422009883352
+        },
+        {
+          "feature": "alipingal_water_level_m_rolling_3h",
+          "importance": 0.037829494826886266
+        },
+        {
+          "feature": "naraj_water_level_m_rolling_12h",
+          "importance": 0.037734575086635504
+        },
+        {
+          "feature": "naraj_water_level_m_rolling_24h",
+          "importance": 0.03593809194559855
+        },
+        {
+          "feature": "alipingal_water_level_m_lag_3h",
+          "importance": 0.026046057707593433
+        },
+        {
+          "feature": "alipingal_water_level_m_lag_1h",
+          "importance": 0.020547035646125034
+        },
+        {
+          "feature": "alipingal_water_level_m_lag_24h",
+          "importance": 0.013382570318198558
+        }
+      ]
+    }
+  }
+}

@@ -9,17 +9,34 @@
 // JSON LOADER
 // ============================================================================
 
-async function loadJSON(path) {
+async function loadJSON(path, retries) {
 
-  const res = await fetch(path);
+  const attempts = 1 + (retries === undefined ? 2 : retries);
 
-  if (!res.ok) {
-    throw new Error(
-      `Failed to load ${path}: ${res.status}`
-    );
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+
+    try {
+
+      const res = await fetch(path);
+
+      if (!res.ok) {
+        throw new Error(
+          `Failed to load ${path}: ${res.status}`
+        );
+      }
+
+      return res.json();
+    }
+    catch (err) {
+
+      if (attempt === attempts) {
+        throw err;
+      }
+
+      // Backoff before retrying transient failures (server restart, blip).
+      await new Promise((r) => setTimeout(r, 600 * attempt));
+    }
   }
-
-  return res.json();
 }
 
 
@@ -80,7 +97,23 @@ document
 let map1 = null;
 let map2 = null;
 
+// Study-region context layers (Mahanadi AOI) — clearly-labelled historical
+// study data, hidden by default so the India-wide default view is neutral.
+let studyAreaGroup = null;
+let stationsGroup = null;
+let candidateGroup = null;
+
 const layerRegistry = {};
+
+// Active NDEM layer on the flood map — swapped when the selected event changes.
+let ndemLayer = null;
+
+// Active satellite images (so event changes can restyle them in place).
+const satImageState = {
+  polarization: "vv",
+};
+
+const SAR_IMAGE_BASE = "data/sar_flood/";
 
 
 // ============================================================================
@@ -168,10 +201,10 @@ function makeMap(elId) {
       }
     ).setView(
       [
-        20.4717,
-        85.7656
+        22.5,
+        79.0
       ],
-      10
+      4.5
     );
 
   L.tileLayer(
@@ -181,6 +214,22 @@ function makeMap(elId) {
         "&copy; OpenStreetMap contributors"
     }
   ).addTo(m);
+
+  // Map-click → drive the shared location pipeline (single source of truth
+  // in app.js). Clicking anywhere in India re-centers everything.
+  m.on("click", (e) => {
+    if (
+      typeof setSelectedLocation === "function" &&
+      window.FloodWatchState
+    ) {
+      setSelectedLocation(
+        e.latlng.lat,
+        e.latlng.lng,
+        "Map pin (" +
+          e.latlng.lat.toFixed(3) + ", " + e.latlng.lng.toFixed(3) + ")"
+      );
+    }
+  });
 
   return m;
 
@@ -198,7 +247,7 @@ async function addCandidateMask(m) {
       "data/sar_flood/sar_flood_candidate_18aug.geojson"
     );
 
-  return L.geoJSON(
+  candidateGroup = L.geoJSON(
     gj,
     {
 
@@ -216,6 +265,8 @@ async function addCandidateMask(m) {
 
     }
   ).addTo(m);
+
+  return candidateGroup;
 
 }
 
@@ -674,7 +725,7 @@ async function addStations(m) {
 
 
   const group =
-    L.layerGroup().addTo(m);
+    (stationsGroup = L.layerGroup()).addTo(m);
 
 
   gj.features.forEach(
@@ -753,8 +804,7 @@ async function addStudyArea(m) {
       "data/naraj_aoi.geojson"
     );
 
-
-  return L.geoJSON(
+  studyAreaGroup = L.geoJSON(
     gj,
     {
 
@@ -777,6 +827,8 @@ async function addStudyArea(m) {
     }
   ).addTo(m);
 
+  return studyAreaGroup;
+
 }
 
 
@@ -784,31 +836,46 @@ async function addStudyArea(m) {
 // HISTORICAL NDEM
 // ============================================================================
 
+const NDEM_FILE_MAP = {
+
+  ndem_16aug:
+    "data/ndem/ndem_16aug.geojson",
+
+  ndem_18aug:
+    "data/ndem/ndem_18aug.geojson",
+
+  ndem_19aug:
+    "data/ndem/ndem_19aug.geojson",
+
+  ndem_21aug:
+    "data/ndem/ndem_21aug.geojson"
+
+};
+
+const NDEM_STYLE = {
+
+  color:
+    "#c2760c",
+
+  weight:
+    1,
+
+  fillColor:
+    "#c2760c",
+
+  fillOpacity:
+    0.4
+
+};
+
 async function addNdemLayer(
   m,
   eventId
 ) {
 
-  const fileMap = {
-
-    ndem_16aug:
-      "data/ndem/ndem_16aug.geojson",
-
-    ndem_18aug:
-      "data/ndem/ndem_18aug.geojson",
-
-    ndem_19aug:
-      "data/ndem/ndem_19aug.geojson",
-
-    ndem_21aug:
-      "data/ndem/ndem_21aug.geojson"
-
-  };
-
-
   const file =
-    fileMap[eventId] ||
-    fileMap.ndem_18aug;
+    NDEM_FILE_MAP[eventId] ||
+    NDEM_FILE_MAP.ndem_18aug;
 
 
   const gj =
@@ -821,27 +888,229 @@ async function addNdemLayer(
     gj,
     {
 
-      style: {
-
-        color:
-          "#c2760c",
-
-        weight:
-          1,
-
-        fillColor:
-          "#c2760c",
-
-        fillOpacity:
-          0.4
-
-      }
+      style:
+        NDEM_STYLE
 
     }
   );
 
 }
 
+
+// Swap the NDEM layer on the flood map when the selected event changes.
+// The layer list checkbox state is preserved: if NDEM was visible it stays
+// visible with the new event's extent; if hidden it stays hidden.
+async function applyNdemEvent(eventId) {
+
+  if (!map2) {
+    return;
+  }
+
+  const file =
+    NDEM_FILE_MAP[eventId];
+
+  if (!file) {
+    // No digitized government extent for this event (2021/2023/2024/2025
+    // CWC-dataset events). Remove any stale layer from a previously
+    // selected event so the map never shows the wrong date's flood mask.
+    if (ndemLayer && map2.hasLayer(ndemLayer)) {
+      map2.removeLayer(ndemLayer);
+    }
+    ndemLayer = null;
+    if (layerRegistry) {
+      layerRegistry.ndem = null;
+    }
+    const cbOff =
+      document.getElementById("pub-simple-layer-4");
+    if (cbOff) {
+      cbOff.checked = false;
+    }
+    return;
+  }
+
+  const wasVisible =
+    ndemLayer &&
+    map2.hasLayer(ndemLayer);
+
+  const next =
+    await addNdemLayer(
+      map2,
+      eventId
+    );
+
+  if (ndemLayer) {
+    map2.removeLayer(ndemLayer);
+  }
+
+  ndemLayer =
+    next;
+
+  layerRegistry.ndem =
+    next;
+
+  if (wasVisible) {
+    next.addTo(map2);
+  }
+
+  // Refresh the simple-layer checkbox binding so toggles still target the
+  // live layer (registry entry was replaced above).
+  const cb =
+    document.getElementById(
+      "pub-simple-layer-4"
+    );
+
+  if (cb) {
+    cb.checked =
+      wasVisible;
+  }
+
+}
+
+
+// ---------------------------------------------------------------------------
+// SATELLITE (SAR) IMAGE STATE
+// ---------------------------------------------------------------------------
+
+function sarImagePath(kind, polarization) {
+  const pol =
+    polarization === "vh" ? "vh" : "vv";
+  const fileMap = {
+    before: "preflood_" + pol + ".png",
+    during: "duringflood_" + pol + ".png",
+    change: "change_combined.png",
+    candidate: "candidate_overlay_composite.png"
+  };
+  return SAR_IMAGE_BASE + fileMap[kind];
+}
+
+function escapeHtmlText(value) {
+  if (typeof escapeHtml === "function") {
+    return escapeHtml(value);
+  }
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function applySarImages(polarization) {
+  satImageState.polarization =
+    polarization === "vh" ? "vh" : "vv";
+
+  const ids = [
+    "sat-img-before",
+    "sat-img-during"
+  ];
+
+  ids.forEach((id) => {
+    const img =
+      document.getElementById(id);
+    if (!img) return;
+    const kind =
+      id === "sat-img-before" ? "before" : "during";
+    img.src =
+      sarImagePath(kind, satImageState.polarization);
+  });
+
+  // Also mark the date labels with the polarization so the state is obvious.
+  const lblBefore =
+    document.getElementById("sat-date-before");
+  const lblDuring =
+    document.getElementById("sat-date-during");
+  if (lblBefore) {
+    lblBefore.textContent =
+      (satImageState.dates && satImageState.dates.before
+        ? satImageState.dates.before + " · "
+        : "") + satImageState.polarization.toUpperCase();
+  }
+  if (lblDuring) {
+    lblDuring.textContent =
+      (satImageState.dates && satImageState.dates.during
+        ? satImageState.dates.during + " · "
+        : "") + satImageState.polarization.toUpperCase();
+  }
+}
+
+async function setSatelliteEventStatus(eventId) {
+  // Read the event and update the "satellite evidence" status banner + dates.
+  const banner =
+    document.getElementById("sat-event-status");
+  const evt =
+    eventsData &&
+    eventsData.events.find((e) => e.id === eventId);
+  if (!evt) return;
+
+  if (banner) {
+    const sat = evt.satellite_evidence || {};
+    const ok = sat.status === "OBSERVED";
+    banner.className =
+      "sat-event-banner " +
+      (ok ? "sat-event-ok" : "sat-event-warn");
+    banner.innerHTML =
+      (ok ? "✓ SAR coverage for this event" : "⚠ No SAR coverage for this event") +
+      " — " +
+      escapeHtmlText(sat.detail || "No Sentinel-1 acquisition for this date.");
+  }
+
+  // Keep polarization images in sync when the event changes.
+  applySarImages(satImageState.polarization);
+}
+
+// ---------------------------------------------------------------------------
+// EVENT SELECTOR (used by event picker + past-floods list)
+// ---------------------------------------------------------------------------
+
+function selectEvent(eventId) {
+  if (
+    !eventsData ||
+    !eventsData.events.some((e) => e.id === eventId)
+  ) {
+    return;
+  }
+
+  currentEventId =
+    eventId;
+
+  const picker =
+    document.getElementById("pub-event-picker");
+  if (picker) {
+    picker.value =
+      eventId;
+  }
+
+  // Keep the past-floods list highlight in sync.
+  document
+    .querySelectorAll(".pub-past-flood-item")
+    .forEach((el) => {
+      el.classList.toggle(
+        "active",
+        el.dataset.eventId === eventId
+      );
+    });
+
+  renderSituationCards();
+  setSatelliteEventStatus(eventId);
+
+  applyNdemEvent(eventId).catch((err) =>
+    console.error("NDEM swap failed:", err)
+  );
+}
+
+
+
+// ============================================================================
+// STUDY-REGION LAYER TOGGLES
+// ============================================================================
+
+// Sync the Flood Map simple-layer checkboxes when study layers are toggled
+// programmatically (e.g. hidden by default on the India-wide view).
+function syncStudyLayerToggles(on) {
+  ["pub-simple-layer-0", "pub-simple-layer-1", "pub-simple-layer-2", "pub-simple-layer-3"]
+    .forEach((id) => {
+      const cb = document.getElementById(id);
+      if (cb) cb.checked = on;
+    });
+}
 
 // ============================================================================
 // OVERVIEW MAP
@@ -869,6 +1138,12 @@ async function initOverviewMap() {
     map1
   );
 
+  // Study-region layers are clearly-labelled historical study data; they are
+  // optional context and start hidden so the India-wide view is neutral.
+  [studyAreaGroup, stationsGroup, candidateGroup].forEach((g) => {
+    if (g && map1.hasLayer(g)) map1.removeLayer(g);
+  });
+  syncStudyLayerToggles(false);
 }
 
 
@@ -914,6 +1189,12 @@ async function initFloodMap() {
       map2
     );
 
+  // India-wide default: build the study-region layers (so toggles work) but
+  // keep them OFF the map until the user enables them.
+  [studyAreaGroup, stationsGroup, candidateGroup].forEach((g) => {
+    if (g && map2.hasLayer(g)) map2.removeLayer(g);
+  });
+
 
   // ========================================================================
   // AI FLOOD
@@ -956,9 +1237,11 @@ async function initFloodMap() {
     );
 
 
-  ndem.addTo(
-    map2
-  );
+  // NDEM is built (so event swaps work) but NOT added by default — the
+  // default flood-map view is the neutral India-wide base map. The user can
+  // toggle the historical study-region layer on from the layer list.
+  ndemLayer = ndem;
+  layerRegistry.ndem = ndem;
 
 
   // ========================================================================
@@ -983,54 +1266,55 @@ async function initFloodMap() {
 
     {
       label:
-        "Potentially affected area",
+        "Study area: potentially affected area (Aug 2022)",
 
       layer:
         candidate,
 
       checked:
-        true
+        false
     },
 
     {
       label:
-        "AI flood inundation",
+        "Study area: AI flood inundation (scene 1017769)",
 
       layer:
         aiFlood,
 
       checked:
-        true
+        false
     },
 
     {
       label:
-        "Monitoring stations",
+        "Study area: CWC monitoring stations",
 
       layer:
         stations,
 
       checked:
-        true
+        false
     },
 
     {
       label:
-        "Study area boundary",
+        "Study area: boundary (Mahanadi AOI)",
 
       layer:
         studyArea,
 
       checked:
-        true
+        false
     },
 
     {
       label:
         "Historical flood extent (reference)",
 
+      // Resolved dynamically so event swaps stay in sync.
       layer:
-        ndem,
+        () => layerRegistry.ndem,
 
       checked:
         true
@@ -1074,14 +1358,19 @@ async function initFloodMap() {
         "change",
         () => {
 
-          if (!d.layer) {
+          const layer =
+            typeof d.layer === "function"
+              ? d.layer()
+              : d.layer;
+
+          if (!layer) {
             return;
           }
 
 
           if (cb.checked) {
 
-            d.layer.addTo(
+            layer.addTo(
               map2
             );
 
@@ -1090,7 +1379,7 @@ async function initFloodMap() {
           else {
 
             map2.removeLayer(
-              d.layer
+              layer
             );
 
           }
@@ -1923,10 +2212,22 @@ let maskParams = null;
 
 async function loadSharedData() {
 
-  eventsData =
-    await loadJSON(
-      "data/events_august2022.json"
-    );
+  // All-years event register: 21 events derived from the real CWC dataset
+  // (Hugging Face bhoomig0630/flood-inundation-upload, 2021-2025) plus the
+  // 4 satellite-verified NDEM events of August 2022. Falls back to the
+  // original 2022-only file when the all-years file is missing.
+  try {
+    eventsData =
+      await loadJSON(
+        "data/events_all_years.json"
+      );
+  } catch (err) {
+    console.warn("All-years events unavailable, falling back to 2022 file:", err.message);
+    eventsData =
+      await loadJSON(
+        "data/events_august2022.json"
+      );
+  }
 
 
   maskParams =
@@ -1971,8 +2272,9 @@ function populateEventPicker() {
         evt.id;
 
 
+      const lvl = evt.cwc_observed.water_level_m;
       opt.textContent =
-        evt.date;
+        evt.date + "  —  peak " + lvl.toFixed(2) + " m";
 
 
       sel.appendChild(
@@ -1991,10 +2293,9 @@ function populateEventPicker() {
     "change",
     () => {
 
-      currentEventId =
-        sel.value;
-
-      renderSituationCards();
+      selectEvent(
+        sel.value
+      );
 
     }
   );
@@ -2021,9 +2322,17 @@ function renderSituationCards() {
   }
 
 
+  // CWC-dataset events (2021-2025) carry a `source: "cwc_dataset"` marker and
+  // a `hydrology` block; the four NDEM events keep their satellite-derived
+  // mask. Guard every lookup so a missing block never breaks rendering.
+  const isVerified =
+    evt.source === "ndem_verified";
   const hasMask =
-    evt.flood_mask_sar_derived.status ===
-    "DERIVED";
+    !!(
+      evt.flood_mask_sar_derived &&
+      evt.flood_mask_sar_derived.status === "DERIVED"
+    );
+  const hydro = evt.hydrology || {};
 
 
   const el =
@@ -2068,10 +2377,35 @@ function renderSituationCards() {
         `${evt.cwc_observed.water_level_m} m`,
 
       sub:
-        `Recorded ${evt.date}`,
+        `Recorded ${
+          (evt.cwc_observed.nearest_reading_time || evt.date).slice(0, 10)
+        }`,
 
       info:
-        "The recorded water level at a river monitoring station."
+        "Recorded water level at Naraj. Danger level 24.28 m = 95th percentile " +
+        "of the 2021-2025 CWC record."
+
+    },
+
+    {
+
+      label:
+        "Rainfall / Rise",
+
+      value:
+        isVerified
+          ? "—"
+          : `${hydro.max_24h_rainfall_mm != null ? hydro.max_24h_rainfall_mm : "—"} mm · +${
+              hydro.max_hourly_rise_m != null ? hydro.max_hourly_rise_m : "—"
+            } m`,
+
+      sub:
+        isVerified
+          ? "Not derived for verified events"
+          : "Max 24h basin rainfall · max hourly rise",
+
+      info:
+        "From the same real CWC dataset the forecast models train on."
 
     },
 
@@ -2089,7 +2423,7 @@ function renderSituationCards() {
       sub:
         evt.satellite_evidence.status ===
         "OBSERVED"
-          ? "6 Aug vs 18 Aug comparison"
+          ? "Pre-event vs during-event comparison"
           : "",
 
       info:
@@ -2555,6 +2889,375 @@ async function renderWaterLevelChart(
 
 
 // ============================================================================
+// SAR LIGHTBOX (click-to-zoom)
+// ============================================================================
+
+function openSarLightbox(src, alt) {
+  let lb = document.getElementById("sar-lightbox");
+  if (!lb) {
+    lb = document.createElement("div");
+    lb.id = "sar-lightbox";
+    lb.className = "sar-lightbox hidden";
+    lb.setAttribute("role", "dialog");
+    lb.setAttribute("aria-modal", "true");
+    lb.innerHTML =
+      '<button class="sar-lightbox-close" aria-label="Close">&#10005;</button>' +
+      '<img class="sar-lightbox-img" alt="" />' +
+      '<div class="sar-lightbox-caption"></div>';
+    document.body.appendChild(lb);
+    lb.addEventListener("click", (e) => {
+      if (e.target === lb || e.target.closest(".sar-lightbox-close")) {
+        lb.classList.add("hidden");
+      }
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") lb.classList.add("hidden");
+    });
+  }
+  const img = lb.querySelector(".sar-lightbox-img");
+  const cap = lb.querySelector(".sar-lightbox-caption");
+  if (img) {
+    img.src = src;
+    img.alt = alt || "SAR image";
+  }
+  if (cap) cap.textContent = alt || "";
+  lb.classList.remove("hidden");
+}
+
+
+// ============================================================================
+// INDIA STATIONS EXPLORER (pan-India CWC gauge registry)
+// ============================================================================
+
+let indiaStationsData = null;
+let indiaMap = null;
+let indiaMarkers = null;
+let indiaSelected = null;
+let indiaFilters = { q: "", basin: "all", state: "all", availability: "all", maxDistanceKm: "all" };
+
+async function initIndiaStations() {
+
+  const mapEl = document.getElementById("india-map");
+  if (!mapEl || indiaMap) return;
+
+  // Real India-wide CWC registry (built from the actual CWC CSVs by
+  // scripts/build_india_registry.py). Falls back to the curated registry
+  // when the built one is absent.
+  try {
+    indiaStationsData = await loadJSON("data/india_cwc/stations.json");
+  } catch (err) {
+    console.warn("India CWC registry unavailable, falling back:", err);
+    indiaStationsData = await loadJSON("data/india_stations.json");
+  }
+
+  indiaMap = L.map("india-map", { zoomControl: true }).setView([22.5, 80], 4);
+
+  L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    { attribution: "&copy; OpenStreetMap contributors" }
+  ).addTo(indiaMap);
+
+  indiaMarkers = L.layerGroup().addTo(indiaMap);
+
+  renderIndiaFilters();
+  renderIndiaList();
+
+  const search = document.getElementById("india-search");
+  if (search) {
+    search.addEventListener("input", () => {
+      indiaFilters.q = search.value.trim().toLowerCase();
+      renderIndiaList();
+    });
+  }
+
+  const typeSel = document.getElementById("india-type");
+  if (typeSel) {
+    indiaFilters.type = "all";
+    typeSel.addEventListener("change", () => {
+      indiaFilters.type = typeSel.value;
+      renderIndiaList();
+    });
+  }
+
+  const stateSel = document.getElementById("india-state");
+  if (stateSel) {
+    stateSel.addEventListener("change", () => {
+      indiaFilters.state = stateSel.value;
+      renderIndiaList();
+    });
+  }
+
+  const availSel = document.getElementById("india-availability");
+  if (availSel) {
+    availSel.addEventListener("change", () => {
+      indiaFilters.availability = availSel.value;
+      renderIndiaList();
+    });
+  }
+
+  const distSel = document.getElementById("india-distance");
+  if (distSel) {
+    distSel.addEventListener("change", () => {
+      indiaFilters.maxDistanceKm = distSel.value;
+      renderIndiaList();
+    });
+  }
+
+  const nearBtn = document.getElementById("india-near-me");
+  if (nearBtn) {
+    nearBtn.addEventListener("click", () => {
+      const sel =
+        window.FloodWatchState && window.FloodWatchState.selectedLocation;
+      if (!sel) {
+        alert("Select a location first (search, Use My Location, or map click).");
+        return;
+      }
+      indiaFilters.near = { lat: sel.latitude, lon: sel.longitude };
+      renderIndiaList();
+    });
+  }
+
+  // Re-sort/re-render when the selected location changes (keeps the
+  // distance column honest without a full pane reload).
+  if (
+    window.FloodWatchState &&
+    typeof window.FloodWatchState.onLocationChange === "function"
+  ) {
+    window.FloodWatchState.onLocationChange(() => {
+      if (!indiaStationsData || !indiaMap) return;
+      if (indiaFilters.near || indiaFilters.maxDistanceKm !== "all") {
+        const sel =
+          window.FloodWatchState && window.FloodWatchState.selectedLocation;
+        if (sel) {
+          indiaFilters.near = { lat: sel.latitude, lon: sel.longitude };
+          renderIndiaList();
+        }
+      }
+    });
+  }
+
+  // Re-render the map when its pane becomes visible (Leaflet needs layout).
+  const btn = document.querySelector('.pub-nav-btn[data-pubtab="india"]');
+  if (btn) {
+    btn.addEventListener("click", () => {
+      setTimeout(() => {
+        if (indiaMap) indiaMap.invalidateSize();
+      }, 60);
+    });
+  }
+}
+
+function indiaDistanceKm(s) {
+  const near = indiaFilters.near;
+  if (!near) return null;
+  return indiaDistanceKmFrom(near, s);
+}
+
+function indiaDistanceKmFrom(from, s) {
+  if (!from || s.latitude == null || s.longitude == null) return null;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(s.latitude - from.lat);
+  const dLon = toRad(s.longitude - from.lon);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(from.lat)) * Math.cos(toRad(s.latitude)) * Math.sin(dLon / 2) ** 2;
+  return Math.round(6371.0 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 10) / 10;
+}
+
+function indiaFilteredStations() {
+  if (!indiaStationsData) return [];
+  let stations = indiaStationsData.stations.filter((s) => {
+    if (indiaFilters.type && indiaFilters.type !== "all" && s.kind !== indiaFilters.type) return false;
+    if (indiaFilters.state !== "all" && s.state !== indiaFilters.state) return false;
+    if (indiaFilters.q) {
+      const hay = (s.station + " " + (s.river || "") + " " + (s.basin || "") + " " + s.state + " " + (s.district || "")).toLowerCase();
+      if (!hay.includes(indiaFilters.q)) return false;
+    }
+    // Data-availability filter (real observation presence / recency).
+    if (indiaFilters.availability === "with-obs" && !s.latest_observation) return false;
+    if (indiaFilters.availability === "recent") {
+      if (!s.last_obs || !indiaStationsData.generated_at) return false;
+      // "Recent" is relative to the registry build — the honest reference
+      // point we have (the CSVs are a historical export, not a live feed).
+      const ageDays =
+        (new Date(indiaStationsData.generated_at).getTime() -
+          new Date(s.last_obs).getTime()) / 86400000;
+      if (!(ageDays >= -1 && ageDays <= 10)) return false;
+    }
+    return true;
+  });
+
+  // Distance filter requires a selected location; applied after computing
+  // per-station distances when either filter or sort needs them.
+  const needsDistance =
+    indiaFilters.near || indiaFilters.maxDistanceKm !== "all";
+  if (needsDistance) {
+    const sel =
+      window.FloodWatchState && window.FloodWatchState.selectedLocation;
+    if (sel) {
+      indiaFilters.near = indiaFilters.near || {
+        lat: sel.latitude,
+        lon: sel.longitude,
+      };
+    }
+  }
+  if (indiaFilters.maxDistanceKm !== "all") {
+    const maxKm = Number(indiaFilters.maxDistanceKm);
+    stations = stations.filter((s) => {
+      if (s.distance_km == null) {
+        const sel =
+          window.FloodWatchState && window.FloodWatchState.selectedLocation;
+        if (!sel) return false;
+        s.distance_km = indiaDistanceKmFrom(sel, s);
+      }
+      return s.distance_km <= maxKm;
+    });
+  }
+  if (indiaFilters.near) {
+    stations = stations
+      .map((s) => Object.assign({}, s, { distance_km: indiaDistanceKm(s) }))
+      .sort((a, b) => a.distance_km - b.distance_km);
+  }
+  return stations;
+}
+
+function renderIndiaFilters() {
+  if (!indiaStationsData) return;
+  const kinds = [...new Set(indiaStationsData.stations.map((s) => s.kind))].filter(Boolean);
+  const states = [...new Set(indiaStationsData.stations.map((s) => s.state))].sort();
+
+  const typeSel = document.getElementById("india-type");
+  if (typeSel && !typeSel.options.length) {
+    typeSel.innerHTML =
+      '<option value="all">All types</option>' +
+      kinds.map((k) => '<option value="' + k + '">' + (k === "river" ? "River discharge" : "Rainfall") + "</option>").join("");
+  }
+  const stateSel = document.getElementById("india-state");
+  if (stateSel) {
+    stateSel.innerHTML =
+      '<option value="all">All states</option>' +
+      states.map((s) => '<option value="' + s + '">' + s + "</option>").join("");
+  }
+}
+
+function renderIndiaList() {
+  const list = document.getElementById("india-station-list");
+  const countEl = document.getElementById("india-count");
+  if (!list) return;
+
+  const all = indiaStationsData ? indiaStationsData.stations : [];
+  const stations = indiaFilteredStations().slice(0, 400); // DOM cap; filters narrow further
+  if (countEl) {
+    countEl.textContent =
+      indiaFilteredStations().length + " of " + all.length + " stations" +
+      (indiaFilters.near ? " (sorted by distance)" : "");
+  }
+
+  indiaMarkers.clearLayers();
+
+  list.innerHTML = stations
+    .map((s, i) => {
+      const obs = s.latest_observation;
+      const obsTxt = obs
+        ? obs.value + " " + (obs.unit || "") + " · " + String(obs.time || "").slice(0, 10)
+        : "no valid observation in dataset";
+      return (
+        '<div class="india-station-item' +
+        (indiaSelected === s.station + "|" + s.latitude ? " active" : "") +
+        '" data-idx="' + i + '">' +
+        '<div class="india-station-name">' + s.station + "</div>" +
+        '<div class="india-station-meta">' +
+          (s.kind === "river" ? "🌊 " : "🌧 ") +
+          ((s.river && s.river !== "-") ? s.river + " · " : "") + s.state +
+          (s.distance_km != null ? " · " + s.distance_km + " km" : "") +
+        "</div>" +
+        '<div class="india-station-flag">' + obsTxt + "</div>" +
+        "</div>"
+      );
+    })
+    .join("");
+
+  list.querySelectorAll(".india-station-item").forEach((el) => {
+    el.addEventListener("click", () => focusIndiaStation(Number(el.dataset.idx)));
+  });
+
+  stations.forEach((s) => {
+    const isRiver = s.kind === "river";
+    const color = isRiver ? "#0f6b78" : "#c2760c";
+    const marker = L.circleMarker([s.latitude, s.longitude], {
+      radius: s.has_observation === false ? 4 : 5,
+      color: "#ffffff",
+      weight: 1.2,
+      fillColor: color,
+      fillOpacity: 0.9,
+    });
+    const obs = s.latest_observation;
+    marker.bindPopup(
+      "<strong>" + s.station + "</strong><br>" +
+      (s.kind === "river" ? "River discharge" : "Rainfall") +
+      ((s.river && s.river !== "-") ? " · " + s.river : "") +
+      (s.district ? " · " + s.district : "") + "<br>" + s.state +
+      (s.distance_km != null ? "<br>" + s.distance_km + " km from selected location" : "") +
+      (obs
+        ? "<br>Latest: " + obs.value + " " + (obs.unit || "") +
+          " · " + String(obs.time || "").replace("T", " ").slice(0, 16) + " UTC"
+        : "<br>No valid observation in the real dataset")
+    );
+    marker.on("click", () => focusIndiaStation(stations.indexOf(s), false));
+    indiaMarkers.addLayer(marker);
+  });
+}
+
+function focusIndiaStation(idx, fly) {
+  if (!indiaStationsData) return;
+  const stations = indiaFilteredStations();
+  const s = stations[idx];
+  if (!s) return;
+
+  indiaSelected = s.station + "|" + s.latitude;
+
+  const panel = document.getElementById("india-station-detail");
+  if (panel) {
+    const obs = s.latest_observation;
+    panel.innerHTML =
+      '<h4>' + s.station + "</h4>" +
+      '<div class="india-detail-row"><strong>Type:</strong> ' +
+      (s.kind === "river" ? "River water discharge" : "Rainfall (telemetry)") + "</div>" +
+      ((s.river && s.river !== "-")
+        ? '<div class="india-detail-row"><strong>River:</strong> ' + s.river + "</div>"
+        : "") +
+      ((s.basin && s.basin !== "-")
+        ? '<div class="india-detail-row"><strong>Basin:</strong> ' + s.basin + "</div>"
+        : "") +
+      '<div class="india-detail-row"><strong>State:</strong> ' + s.state +
+      (s.district ? " · " + s.district : "") + "</div>" +
+      '<div class="india-detail-row"><strong>Coordinates:</strong> ' +
+      s.latitude.toFixed(3) + ", " + s.longitude.toFixed(3) + "</div>" +
+      (s.distance_km != null
+        ? '<div class="india-detail-row"><strong>Distance from selected location:</strong> ' +
+          s.distance_km + " km</div>"
+        : "") +
+      '<div class="india-detail-row"><strong>Observations:</strong> ' +
+      (s.n_obs || 0) + " rows" +
+      (s.first_obs ? " (" + s.first_obs.slice(0, 10) + " → " + s.last_obs.slice(0, 10) + ")" : "") +
+      "</div>" +
+      (obs
+        ? '<div class="india-detail-row"><strong>Latest observation:</strong> ' +
+          obs.value + " " + (obs.unit || "") + " at " +
+          String(obs.time || "").replace("T", " ").slice(0, 16) + " UTC</div>"
+        : '<div class="india-detail-row"><strong>Latest observation:</strong> none in the real dataset</div>') +
+      '<div class="india-detail-row"><strong>Source:</strong> CWC NWDP telemetry CSVs ' +
+      '(real data — see Data & Methodology)</div>';
+  }
+
+  renderIndiaList();
+
+  if (indiaMap && fly !== false) {
+    indiaMap.flyTo([s.latitude, s.longitude], 6, { duration: 0.6 });
+  }
+}
+
+// ============================================================================
 // SATELLITE STORY
 // ============================================================================
 
@@ -2587,7 +3290,7 @@ async function initSatelliteStory() {
   if (before) {
 
     before.src =
-      "data/sar_flood/preflood_vv.png";
+      sarImagePath("before", "vv");
 
   }
 
@@ -2595,7 +3298,7 @@ async function initSatelliteStory() {
   if (during) {
 
     during.src =
-      "data/sar_flood/duringflood_vv.png";
+      sarImagePath("during", "vv");
 
   }
 
@@ -2603,7 +3306,7 @@ async function initSatelliteStory() {
   if (change) {
 
     change.src =
-      "data/sar_flood/change_combined.png";
+      sarImagePath("change", "vv");
 
   }
 
@@ -2611,22 +3314,50 @@ async function initSatelliteStory() {
   if (candidate) {
 
     candidate.src =
-      "data/sar_flood/candidate_overlay_composite.png";
+      sarImagePath("candidate", "vv");
 
   }
 
+  // Click-to-zoom lightbox on every SAR image.
+  [before, during, change, candidate].forEach((img) => {
+    if (!img) return;
+    img.classList.add("sat-zoomable");
+    img.setAttribute("role", "button");
+    img.setAttribute("tabindex", "0");
+    img.setAttribute(
+      "aria-label",
+      "View satellite image enlarged"
+    );
+    const zoom = () => openSarLightbox(img.src, img.alt);
+    img.addEventListener("click", zoom);
+    img.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        zoom();
+      }
+    });
+  });
 
+  // Polarization toggle (VV = co-polar, VH = cross-polar).
+  const polWrap = document.getElementById("sat-pol-toggle");
+  if (polWrap) {
+    polWrap.classList.remove("hidden");
+    polWrap.querySelectorAll("button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        polWrap
+          .querySelectorAll("button")
+          .forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        applySarImages(btn.dataset.pol);
+      });
+    });
+  }
+
+  // Event-aware status banner + dates.
   const scenes =
     await loadJSON(
       "data/sentinel1/scenes_metadata.json"
     );
-
-
-  const params =
-    await loadJSON(
-      "data/sar_flood/candidate_mask_params.json"
-    );
-
 
   const pre =
     scenes.scenes.find(
@@ -2635,7 +3366,6 @@ async function initSatelliteStory() {
         "s1_06aug"
     );
 
-
   const duringScene =
     scenes.scenes.find(
       (s) =>
@@ -2643,10 +3373,42 @@ async function initSatelliteStory() {
         "s1_18aug"
     );
 
+  const fmtDay = (iso) => {
+    const m = String(iso || "").match(/^\d{4}-(\d{2})-(\d{2})$/);
+    if (!m) return iso || "";
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return Number(m[2]) + " " + months[Number(m[1]) - 1];
+  };
+
+  satImageState.dates = {
+    before: pre ? fmtDay(pre.date) : "06 Aug",
+    during: duringScene ? fmtDay(duringScene.date) : "18 Aug"
+  };
+
+  const lblBefore =
+    document.getElementById("sat-date-before");
+  const lblDuring =
+    document.getElementById("sat-date-during");
+  if (lblBefore) {
+    lblBefore.textContent =
+      satImageState.dates.before + " · VV";
+  }
+  if (lblDuring) {
+    lblDuring.textContent =
+      satImageState.dates.during + " · VV";
+  }
+
+  await setSatelliteEventStatus(currentEventId);
+
 
   const tech =
     document.getElementById(
       "sat-tech-content"
+    );
+
+  const params =
+    await loadJSON(
+      "data/sar_flood/candidate_mask_params.json"
     );
 
 
@@ -2735,7 +3497,6 @@ async function initSatelliteStory() {
 // ============================================================================
 // PAST FLOODS
 // ============================================================================
-
 function initPastFloods() {
 
   const el =
@@ -2744,7 +3505,7 @@ function initPastFloods() {
     );
 
 
-  if (!el) {
+  if (!el || !eventsData) {
     return;
   }
 
@@ -2752,114 +3513,85 @@ function initPastFloods() {
   el.innerHTML =
     "";
 
+  // Group events by year (newest first) for a scannable timeline.
+  const byYear = new Map();
+  eventsData.events
+    .slice()
+    .sort((a, b) => (a.date < b.date ? 1 : -1))
+    .forEach((evt) => {
+      const y = String(evt.date).slice(0, 4);
+      if (!byYear.has(y)) byYear.set(y, []);
+      byYear.get(y).push(evt);
+    });
 
-  eventsData.events.forEach(
-    (evt) => {
+  const fmtDate = (iso) => {
+    const d = new Date(iso + "T00:00:00");
+    return isNaN(d) ? iso : d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  };
+
+  byYear.forEach((evts, year) => {
+
+    const yearHead =
+      document.createElement("div");
+    yearHead.className = "pub-pf-year";
+    yearHead.textContent =
+      year + "  ·  " + evts.length + (evts.length === 1 ? " event" : " events");
+    el.appendChild(yearHead);
+
+    evts.forEach((evt) => {
 
       const item =
-        document.createElement(
-          "div"
-        );
+        document.createElement("div");
+      item.className = "pub-past-flood-item";
+      item.dataset.eventId = evt.id;
+      item.setAttribute("role", "button");
+      item.setAttribute("tabindex", "0");
 
-
-      item.className =
-        "pub-past-flood-item";
-
+      const verified = evt.source === "ndem_verified";
+      const lvl = evt.cwc_observed.water_level_m;
+      const dur = evt.duration_hours;
+      const badges = [];
+      if (verified) badges.push('<span class="pub-pf-badge ok">NDEM verified</span>');
+      if (evt.satellite_evidence && evt.satellite_evidence.status === "OBSERVED")
+        badges.push('<span class="pub-pf-badge ok">SAR</span>');
+      if (!verified)
+        badges.push('<span class="pub-pf-badge">CWC record</span>');
 
       item.innerHTML = `
-
-        <div
-          class="pub-pf-date"
-        >
-          ${evt.date}
+        <div class="pub-pf-top">
+          <span class="pub-pf-date">${fmtDate(evt.date)}</span>
+          <span class="pub-pf-level ${lvl >= 25 ? "severe" : ""}">${lvl.toFixed(2)} m</span>
         </div>
-
-        <div
-          class="pub-pf-detail"
-        >
-          Water level:
-          <strong>
-            ${evt.cwc_observed.water_level_m} m
-          </strong>
+        <div class="pub-pf-meta">
+          ${dur ? `<span>${dur} h above danger level</span>` : ""}
+          ${badges.join(" ")}
         </div>
-
-        <div
-          class="pub-pf-detail"
-        >
-          Historical reference:
-          <strong>
-            ${
-              evt.ndem_inundation.available
-                ? "Available"
-                : "Not available"
-            }
-          </strong>
-        </div>
-
-        <div
-          class="pub-pf-detail"
-        >
-          Satellite evidence:
-          <strong>
-            ${
-              evt.satellite_evidence.status ===
-              "OBSERVED"
-                ? "Available"
-                : "Not available"
-            }
-          </strong>
-        </div>
-
       `;
 
+      const activate = () => {
+        selectEvent(evt.id);
+        const floodBtn =
+          document.querySelector('.pub-nav-btn[data-pubtab="floodmap"]');
+        if (floodBtn) floodBtn.click();
+      };
 
-      item.addEventListener(
-        "click",
-        () => {
-
-          currentEventId =
-            evt.id;
-
-
-          const picker =
-            document.getElementById(
-              "pub-event-picker"
-            );
-
-
-          if (picker) {
-
-            picker.value =
-              evt.id;
-
-          }
-
-
-          renderSituationCards();
-
-
-          const overviewBtn =
-            document.querySelector(
-              '.pub-nav-btn[data-pubtab="overview"]'
-            );
-
-
-          if (overviewBtn) {
-
-            overviewBtn.click();
-
-          }
-
+      item.addEventListener("click", activate);
+      item.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          activate();
         }
-      );
+      });
 
+      if (evt.id === currentEventId) {
+        item.classList.add("active");
+      }
 
-      el.appendChild(
-        item
-      );
+      el.appendChild(item);
 
-    }
-  );
+    });
+
+  });
 
 }
 
@@ -3295,157 +4027,130 @@ function initTourBanner() {
 
 // ============================================================================
 // BOOT
-// ============================================================================
+// ============================================================================// Resilient boot: each step runs independently so one failed dataset,
+// script or slow network cannot blank the whole dashboard.
+(function boot() {
 
-(async function boot() {
-
-  try {
-
-    console.log(
-      "Starting FloodWatch..."
-    );
+  console.log(
+    "Starting FloodWatch..."
+  );
 
 
-    // ------------------------------------------------------------------------
-    // Existing shared data
-    // ------------------------------------------------------------------------
+  const bootFailures = [];
 
-    await loadSharedData();
+  function safeStep(name, fn) {
+    return Promise.resolve()
+      .then(fn)
+      .catch((err) => {
+        bootFailures.push(name + ": " + (err && err.message ? err.message : err));
+        console.error("FloodWatch boot step failed (continuing):", name, err);
+      });
+  }
 
-
-    // ------------------------------------------------------------------------
-    // AI flood results
-    // ------------------------------------------------------------------------
-
-    await loadAIFloodResults();
-
-
-    // ------------------------------------------------------------------------
-    // Event picker
-    // ------------------------------------------------------------------------
-
-    populateEventPicker();
-
-
-    // ------------------------------------------------------------------------
-    // Situation cards
-    // ------------------------------------------------------------------------
-
-    renderSituationCards();
-
+  safeStep("shared data", loadSharedData)
+    .then(() => safeStep("AI flood results", loadAIFloodResults))
+    .then(() => safeStep("event picker", populateEventPicker))
+    .then(() => safeStep("situation cards", renderSituationCards))
 
     // ------------------------------------------------------------------------
     // Overview
     // ------------------------------------------------------------------------
 
-    await initOverviewMap();
-
-
-    initWhatAmI();
-
+    .then(() => safeStep("overview map", initOverviewMap))
+    .then(() => safeStep("what-am-i", initWhatAmI))
 
     // ------------------------------------------------------------------------
     // Flood map
     // ------------------------------------------------------------------------
 
-    await initFloodMap();
-
+    .then(() => safeStep("flood map", initFloodMap))
 
     // ------------------------------------------------------------------------
     // Water levels
     // ------------------------------------------------------------------------
 
-    await initWaterLevels();
-
+    .then(() => safeStep("water levels", initWaterLevels))
 
     // ------------------------------------------------------------------------
     // Satellite story
     // ------------------------------------------------------------------------
 
-    await initSatelliteStory();
-
+    .then(() => safeStep("satellite story", initSatelliteStory))
 
     // ------------------------------------------------------------------------
     // Past floods
     // ------------------------------------------------------------------------
 
-    initPastFloods();
-
-
-    // ------------------------------------------------------------------------
-    // Guide
-    // ------------------------------------------------------------------------
-
-    initGuide();
-
+    .then(() => safeStep("past floods", initPastFloods))
 
     // ------------------------------------------------------------------------
-    // Tour
+    // Guide / Tour
     // ------------------------------------------------------------------------
 
-    initTourBanner();
+    .then(() => safeStep("guide", initGuide))
+    .then(() => safeStep("india stations", initIndiaStations))
+    .then(() => safeStep("tour banner", initTourBanner))
+    .then(() => {
+
+      if (bootFailures.length === 0) {
+
+        console.log(
+          "=========================================="
+        );
+
+        console.log(
+          "FloodWatch loaded successfully."
+        );
 
 
-    console.log(
-      "=========================================="
-    );
+        console.log(
+          "AI Scene:",
+          AI_FLOOD_SCENE
+        );
 
 
-    console.log(
-      "FloodWatch loaded successfully."
-    );
+        console.log(
+          "AI GeoJSON:",
+          AI_FLOOD_GEOJSON
+        );
 
 
-    console.log(
-      "AI Scene:",
-      AI_FLOOD_SCENE
-    );
+        console.log(
+          "AI Results:",
+          AI_FLOOD_RESULTS
+        );
 
 
-    console.log(
-      "AI GeoJSON:",
-      AI_FLOOD_GEOJSON
-    );
+        console.log(
+          "AI Threshold:",
+          AI_FLOOD_THRESHOLD
+        );
 
 
-    console.log(
-      "AI Results:",
-      AI_FLOOD_RESULTS
-    );
+        console.log(
+          "=========================================="
+        );
 
+        return;
+      }
 
-    console.log(
-      "AI Threshold:",
-      AI_FLOOD_THRESHOLD
-    );
+      // Partial failure: warn without blocking the working UI.
+      console.warn(
+        "FloodWatch loaded with " + bootFailures.length + " degraded section(s):",
+        bootFailures.join(" | ")
+      );
 
-
-    console.log(
-      "=========================================="
-    );
-
-  }
-
-  catch (err) {
-
-    console.error(
-      "FloodWatch boot error:",
-      err
-    );
-
-
-    document.body.insertAdjacentHTML(
-
-      "beforeend",
-
-      `
-      <div
-        style="
-          position:fixed;
-          bottom:10px;
-          left:10px;
-          right:10px;
-          background:#a4271f;
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        `<div
+          id="pub-boot-warning"
+          role="status"
+          style="
+            position:fixed;
+            bottom:10px;
+            left:10px;
+            right:10px;
+            background:#8a5a00;
           color:white;
           padding:10px 14px;
           border-radius:6px;
@@ -3454,18 +4159,21 @@ function initTourBanner() {
         "
       >
 
-        Failed to load:
-        ${err.message}
+        ⚠ Some FloodWatch sections could not load: ${bootFailures.map(esc).join(" · ")}. The rest of the dashboard still works.
 
         <br>
 
-        Check the browser console.
+        Check the browser console for details. <button type="button" onclick="this.parentElement.remove()" style="margin-left:8px;background:none;border:1px solid #fff;color:#fff;cursor:pointer;border-radius:4px;padding:2px 8px">Dismiss</button>
 
       </div>
       `
+      );
+    });
 
-    );
-
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
   }
-
 })();

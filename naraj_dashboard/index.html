@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 
 <head>
@@ -11,7 +11,7 @@
 />
 
 <title>
-    FloodWatch — Flood information made easier
+    FloodWatch India — Flood intelligence for all of India
 </title>
 
 <!-- ========================================================
@@ -491,11 +491,13 @@
     <div class="pub-header-brand">
 
         <span class="pub-logo">
+            <span class="pub-logo-mark" aria-hidden="true">◮</span>
             FloodWatch
         </span>
 
         <span class="pub-tagline">
-            Flood information made easier
+            Flood intelligence for India —
+            observation, analysis &amp; prediction
         </span>
 
     </div>
@@ -557,6 +559,14 @@
         data-pubtab="pastfloods"
     >
         Past Floods
+    </button>
+
+
+    <button
+        class="pub-nav-btn"
+        data-pubtab="india"
+    >
+        India Stations
     </button>
 
 
@@ -654,7 +664,7 @@
             <input
                 type="text"
                 id="location-search"
-                placeholder="Search a location (e.g. Delhi, Udaipur, Cuttack)"
+                placeholder="Search any location in India (e.g. Assam, Delhi, Kerala, Cuttack)"
                 autocomplete="off"
                 style="flex:1; min-width:0;"
             />
@@ -701,10 +711,9 @@
 
     <p class="pub-demo-note">
 
-        Use <strong>Use My Location</strong>
-        to check the nearest available
-        CWC rainfall and river monitoring
-        stations.
+        Select any location in India — search it, use your device location, or
+        click the map. The nearest real CWC rainfall and river stations are
+        looked up from the India-wide station registry.
 
     </p>
 
@@ -805,7 +814,185 @@
 
 
     <!-- ====================================================
-         AI FLOOD FORECAST
+         PRESENT CONDITION (OBSERVED — real data, not ML)
+    ===================================================== -->
+
+    <div
+        class="cwc-card present-condition-card"
+        id="present-condition"
+    >
+
+        <div class="forecast-header">
+
+            <h2>
+                🛰️ Present Condition <span class="pc-badge-observed">OBSERVED</span>
+            </h2>
+
+            <span class="forecast-source">
+                Latest real CWC observations
+            </span>
+
+        </div>
+
+
+        <div
+            id="present-condition-status"
+            class="forecast-status"
+            role="status"
+            aria-live="polite"
+        >
+            Select a location to build the present condition from real
+            observations.
+        </div>
+
+
+        <div class="pc-body">
+
+            <div class="pc-main">
+
+                <div class="pc-status-row">
+
+                    <div class="overall-risk-label">
+                        STATUS
+                    </div>
+
+                    <div
+                        id="pc-status-value"
+                        class="overall-risk-value unknown"
+                    >
+                        —
+                    </div>
+
+                    <span class="pc-rule-note">
+                        Rule-based, from real observations — not a forecast
+                    </span>
+
+                </div>
+
+
+                <div
+                    id="pc-basis"
+                    class="pc-basis"
+                ></div>
+
+                <details
+                    id="pc-why"
+                    class="pc-why"
+                >
+                    <summary>Why this status?</summary>
+
+                    <div
+                        id="pc-why-list"
+                        class="pc-why-list"
+                    >
+                        Select a location to build the evidence list.
+                    </div>
+
+                </details>
+
+            </div>
+
+
+            <div class="pc-stats">
+
+                <div class="pc-stat">
+
+                    <span class="pc-stat-label">Rainfall</span>
+
+                    <strong id="pc-rainfall">—</strong>
+
+                    <span
+                        id="pc-rainfall-trend"
+                        class="pc-trend"
+                    ></span>
+
+                </div>
+
+
+                <div class="pc-stat">
+
+                    <span class="pc-stat-label">River</span>
+
+                    <strong id="pc-river">—</strong>
+
+                    <span
+                        id="pc-river-trend"
+                        class="pc-trend"
+                    ></span>
+
+                </div>
+
+
+                <div class="pc-stat">
+
+                    <span class="pc-stat-label">Nearest station</span>
+
+                    <strong id="pc-station">—</strong>
+
+                    <span
+                        id="pc-station-distance"
+                        class="pc-trend"
+                    ></span>
+
+                </div>
+
+
+                <div class="pc-stat">
+
+                    <span class="pc-stat-label">Last updated</span>
+
+                    <strong id="pc-updated">—</strong>
+
+                    <span
+                        id="pc-freshness"
+                        class="pc-trend"
+                    ></span>
+
+                    <span
+                        id="pc-quality"
+                        class="pc-quality"
+                        title="Data quality: freshness of the newest observation relative to the dataset's newest record"
+                    >—</span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div
+            id="pc-unavailable-note"
+            class="pc-unavailable-note"
+            hidden
+        ></div>
+
+        <details
+            id="pc-coverage"
+            class="pc-coverage"
+        >
+            <summary>Location data coverage</summary>
+
+            <ul
+                id="pc-coverage-list"
+                class="pc-coverage-list"
+                aria-label="Data availability for the selected location"
+            >
+                <li data-cov="rainfall">Rainfall: —</li>
+                <li data-cov="river">River: —</li>
+                <li data-cov="satellite">Satellite: —</li>
+                <li data-cov="flood_extent">Flood extent: —</li>
+                <li data-cov="historical_events">Historical events: —</li>
+                <li data-cov="ai_forecast">AI forecast: —</li>
+            </ul>
+
+        </details>
+
+    </div>
+
+
+    <!-- ====================================================
+         AI FLOOD FORECAST (PREDICTED — ML model output)
     ===================================================== -->
 
     <div
@@ -816,7 +1003,7 @@
         <div class="forecast-header">
 
             <h2>
-                🤖 AI Flood Forecast
+                🤖 AI Future Forecast <span class="pc-badge-predicted">PREDICTED</span>
             </h2>
 
             <span class="forecast-source">
@@ -829,8 +1016,40 @@
         <div
             id="forecast-status"
             class="forecast-status"
+            role="status"
+            aria-live="polite"
         >
             Connecting to AI forecast...
+        </div>
+
+
+        <!-- STATION PICKER -->
+
+        <div class="forecast-station-row">
+
+            <label
+                class="forecast-station-label"
+                for="forecast-station"
+            >
+                Forecast station:
+            </label>
+
+            <select
+                id="forecast-station"
+                class="forecast-station-select"
+                aria-label="Select the CWC study station to forecast"
+            >
+                <option value="naraj">Naraj · Mahanadi (Cuttack)</option>
+                <option value="alipingal">Alipingal · Dhaniya (Jagatsinghpur)</option>
+                <option value="nimapara">Nimapara · Dandia (Puri)</option>
+            </select>
+
+            <span
+                id="forecast-ml-note"
+                class="forecast-ml-note"
+                title="Random Forest models are served for the Naraj feature pipeline; other stations use the statistical engine"
+            ></span>
+
         </div>
 
 
@@ -838,7 +1057,26 @@
             id="forecast-location"
             class="forecast-location"
         >
-            📍 Forecast location: Naraj / Cuttack region
+            📍 Model study region: Naraj / Cuttack (Mahanadi) — select a location to see model scope
+        </div>
+
+
+        <div
+            id="forecast-coverage-note"
+            class="forecast-coverage-note"
+            hidden
+        >
+            <strong>AI forecast unavailable for this location with the current calibrated model.</strong>
+            <span>
+                The trained Random Forest is calibrated for the Naraj/Cuttack
+                (Odisha) study region only. The cards below are the study-station
+                forecast chosen in the picker — they are NOT predictions for your
+                selected location. Present-condition observations above remain
+                available for your location.
+            </span>
+            <span class="forecast-coverage-meta">
+                Model: Random Forest (71 features) · Calibration: Naraj/Cuttack, Odisha
+            </span>
         </div>
 
 
@@ -880,6 +1118,123 @@
             id="forecast-observation"
             class="forecast-observation"
         ></div>
+
+
+        <!-- FORECAST CONE CHART -->
+
+        <div class="forecast-cone-wrap">
+
+            <div class="forecast-cone-header">
+
+                <strong>
+                    Water level: observations & forecast cone
+                </strong>
+
+                <span class="forecast-cone-note">
+                    Shaded band = projected range; dashed line = flood-signal level
+                </span>
+
+            </div>
+
+            <div class="forecast-cone-canvas-wrap">
+
+                <canvas
+                    id="forecast-cone-chart"
+                    height="220"
+                    aria-label="Chart of recent water levels and the 6 to 24 hour forecast range"
+                    role="img"
+                ></canvas>
+
+            </div>
+
+        </div>
+
+
+        <!-- EXPORT & MODEL INFO -->
+
+        <div class="forecast-actions">
+
+            <button
+                type="button"
+                id="forecast-refresh-btn"
+                class="forecast-action-btn"
+            >
+                ↻ Refresh forecast
+            </button>
+
+            <a
+                id="forecast-export-csv"
+                class="forecast-action-btn"
+                href="/api/forecast/export?format=csv"
+                download
+            >
+                ⬇ Download CSV
+            </a>
+
+            <a
+                id="forecast-export-json"
+                class="forecast-action-btn"
+                href="/api/forecast/export?format=json"
+                target="_blank"
+                rel="noopener"
+            >
+                ⬇ Download JSON
+            </a>
+
+            <button
+                type="button"
+                id="model-info-toggle"
+                class="forecast-action-btn"
+                aria-expanded="false"
+                aria-controls="model-info-panel"
+            >
+                ℹ Model & validation info
+            </button>
+
+        </div>
+
+
+        <div
+            id="model-info-panel"
+            class="model-info-panel hidden"
+        >
+            <p class="muted small">
+                Loading model information...
+            </p>
+        </div>
+
+
+        <details
+            id="forecast-why"
+            class="forecast-why"
+        >
+            <summary>Why this forecast?</summary>
+
+            <div
+                id="forecast-why-body"
+                class="forecast-why-body"
+            >
+                <p>
+                    Prediction generated from the trained temporal feature
+                    set — 71 features built from real CWC rainfall and
+                    water-level observations: recent rainfall accumulations
+                    (1h–24h), lagged and rolling river levels, multi-station
+                    regional signals, and time-of-year encodings. The
+                    Random Forest outputs a calibrated probability that the
+                    station exceeds its flood threshold in the next 6, 12,
+                    or 24 hours.
+                </p>
+
+                <p class="muted small">
+                    Per-prediction feature contributions are not currently
+                    exposed, so no per-forecast attribution is shown —
+                    global feature importances are in “Model &amp; validation
+                    info” above.
+                </p>
+
+            </div>
+
+        </details>
 
 
         <div
@@ -1158,11 +1513,11 @@
 
         <h2>
 
-            River Water Level
+            Historical Study Stations — Water Level Records
 
             <span
                 class="info-icon-static"
-                title="Recorded water levels at a river monitoring station."
+                title="Verified CWC records for the three stations of the Naraj/Cuttack model study region. These are historical study data, not India-wide current monitoring."
             >
                 i
             </span>
@@ -1171,9 +1526,10 @@
 
 
         <p class="pub-subtext">
-            This chart shows recorded water
-            levels from the selected monitoring
-            station.
+            <strong>Historical study-station records</strong> — verified CWC series for
+            the three stations of the Naraj/Cuttack (Mahanadi) study region, where the
+            forecast model is calibrated. The <em>selected-location</em> monitoring
+            appears in the Overview cards and Flood Map for any location in India.
         </p>
 
 
@@ -1212,11 +1568,11 @@
 
         <h2>
 
-            Satellite Evidence
+            Satellite Evidence — study region
 
             <span
                 class="info-icon-static"
-                title="Radar satellites can observe the ground even through clouds and at night."
+                title="Calibrated Sentinel-1 SAR scenes are processed for the Naraj/Cuttack study region (August 2022 event). The platform architecture supports adding scenes for other regions when data is acquired."
             >
                 i
             </span>
@@ -1225,9 +1581,63 @@
 
 
         <p class="pub-subtext">
-            Radar satellites can observe changes
-            in the Earth's surface even when
-            clouds are present.
+            Calibrated Sentinel-1 radar evidence currently exists in the project for
+            the <strong>Naraj/Cuttack (Mahanadi) study region</strong> — the August
+            2022 flood. Satellite evidence is not currently available for other
+            selected locations; none is invented.
+        </p>
+
+
+        <div
+            class="sat-event-banner sat-event-warn"
+            id="sat-location-status"
+            role="status"
+        >
+            Satellite evidence is not currently available for this location.
+            Processed scenes cover the Naraj/Cuttack study region only (below).
+        </div>
+
+
+        <div
+            class="sat-pol-toggle hidden"
+            id="sat-pol-toggle"
+            role="group"
+            aria-label="Polarization"
+        >
+
+            <span class="sat-pol-label">
+                Polarization:
+            </span>
+
+
+            <button
+                type="button"
+                class="active"
+                data-pol="vv"
+            >
+                VV
+            </button>
+
+
+            <button
+                type="button"
+                data-pol="vh"
+            >
+                VH
+            </button>
+
+        </div>
+
+
+        <div
+            class="sat-event-banner"
+            id="sat-event-status"
+            role="status"
+        >
+        </div>
+
+        <p class="pub-caption" style="margin-top:6px;">
+            Event SAR coverage (study region): below.
         </p>
 
 
@@ -1358,15 +1768,24 @@
     <div class="pub-card wide">
 
         <h2>
-            Past Floods — August 2022
+            Past Floods — study-region events, 2021–2025
         </h2>
 
 
         <p class="pub-subtext">
-            Browse available historical
-            flood dates for the current
-            demonstration area.
+            Real historical flood events derived from the project's CWC dataset and
+            digitized NDEM extents. These events are from the <strong>Naraj/Cuttack
+            (Mahanadi) study region</strong> where the verified records exist — the
+            project does not claim India-wide historical event coverage.
         </p>
+
+        <div
+            class="sat-event-banner sat-event-warn"
+            id="pastfloods-location-status"
+            role="status"
+        >
+            The historical event record covers the Naraj/Cuttack study region only.
+        </div>
 
 
         <div
@@ -1376,6 +1795,175 @@
     </div>
 
 </section>
+<!-- ========================================================
+     INDIA STATIONS EXPLORER
+========================================================= -->
+
+<section
+    class="pub-pane"
+    id="pub-india"
+>
+
+    <div class="pub-card wide">
+
+        <h2>
+            India Stations — CWC monitoring network
+        </h2>
+
+
+        <p class="pub-subtext">
+            India-wide registry built from the project's <strong>real CWC
+            datasets</strong>: 808 telemetry rainfall stations (2021–2025,
+            state-wise) and 34 river-discharge stations (1970–2025). Filter by
+            state or type, search, and see each station's distance from your
+            selected location. Click a marker for details.
+        </p>
+
+
+        <div class="india-controls">
+
+            <input
+                type="search"
+                id="india-search"
+                placeholder="Search station, river, district…"
+                aria-label="Search stations"
+            />
+
+
+            <select
+                id="india-type"
+                aria-label="Filter by station type"
+            >
+                <option value="all">
+                    All types
+                </option>
+                <option value="rainfall">
+                    Rainfall
+                </option>
+                <option value="river">
+                    River discharge
+                </option>
+            </select>
+
+
+            <select
+                id="india-state"
+                aria-label="Filter by state"
+            >
+                <option value="all">
+                    All states
+                </option>
+            </select>
+
+
+            <select
+                id="india-availability"
+                aria-label="Filter by data availability"
+            >
+                <option value="all">
+                    All data
+                </option>
+                <option value="with-obs">
+                    Has latest observation
+                </option>
+                <option value="recent">
+                    Recent data (≤ 10 days of dataset newest)
+                </option>
+            </select>
+
+
+            <select
+                id="india-distance"
+                aria-label="Filter by distance from selected location"
+            >
+                <option value="all">
+                    Any distance
+                </option>
+                <option value="50">
+                    ≤ 50 km of selected location
+                </option>
+                <option value="100">
+                    ≤ 100 km
+                </option>
+                <option value="250">
+                    ≤ 250 km
+                </option>
+            </select>
+
+
+            <button
+                type="button"
+                id="india-near-me"
+                class="india-near-btn"
+                title="Sort by distance from the selected location"
+            >
+                📍 Near selected location
+            </button>
+
+
+            <span
+                class="india-count"
+                id="india-count"
+            >
+            </span>
+
+        </div>
+
+
+        <div class="india-layout">
+
+            <div
+                class="india-list"
+                id="india-station-list"
+                role="listbox"
+                aria-label="Stations"
+            >
+            </div>
+
+
+            <div
+                id="india-map"
+                class="india-map"
+                role="img"
+                aria-label="Map of river gauge stations across India"
+            >
+            </div>
+
+
+            <div
+                class="india-detail"
+                id="india-station-detail"
+            >
+
+                <h4>
+                    Station details
+                </h4>
+
+
+                <p class="pub-subtext">
+                    Select a station from the list or
+                    map to see its details here.
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <p class="pub-caption">
+            Registry compiled from public CWC
+            flood-forecast network listings.
+            Coordinates are approximate
+            (town/district level) except the three
+            verified local stations; danger levels
+            are indicative. Not for operational
+            use.
+        </p>
+
+    </div>
+
+</section>
+
 <!-- ========================================================
      GUIDE DRAWER
 ========================================================= -->
@@ -1598,8 +2186,9 @@
 
 <footer class="pub-footer">
 
-    FloodWatch a flood information
-    demonstration system.
+    FloodWatch India — built on real CWC datasets (rainfall 2021–2025, river
+    discharge 1970–2025). AI forecast is calibrated for the Naraj/Cuttack study
+    region; not a live government flood warning.
 
 
     <a href="research.html">
@@ -1627,6 +2216,15 @@
      EXISTING DASHBOARD JAVASCRIPT
 ========================================================= -->
 
+<script>
+
+/* Same-origin API base: works behind the Freebuff preview,
+   the python api/main.py server, or any static host. */
+window.FLOODWATCH_API_BASE = "";
+
+</script>
+
+
 <script
     src="public.js"
 ></script>
@@ -1639,538 +2237,6 @@
 <script
     src="app.js"
 ></script>
-
-
-<script>
-
-/* =========================================================
-   FLOODWATCH LOCATION SEARCH
-========================================================= */
-
-async function floodWatchSearchLocation() {
-
-    const input =
-        document.getElementById("location-search");
-
-    const button =
-        document.getElementById("location-search-button");
-
-
-    if (!input) {
-
-        console.error(
-            "location-search input not found"
-        );
-
-        return;
-    }
-
-
-    const query =
-        input.value.trim();
-
-
-    if (!query) {
-
-        const status =
-            document.getElementById(
-                "location-status"
-            );
-
-
-        if (status) {
-
-            status.textContent =
-                "Please enter a location.";
-
-            status.className =
-                "location-status error";
-        }
-
-
-        input.focus();
-
-        return;
-    }
-
-
-    if (button) {
-
-        button.disabled = true;
-
-        button.textContent =
-            "Searching...";
-    }
-
-
-    try {
-
-        const url =
-            "https://nominatim.openstreetmap.org/search" +
-            "?format=json" +
-            "&limit=1" +
-            "&q=" +
-            encodeURIComponent(query);
-
-
-        const response =
-            await fetch(url, {
-
-                headers: {
-                    "Accept": "application/json"
-                }
-
-            });
-
-
-        if (!response.ok) {
-
-            throw new Error(
-                "Search HTTP " +
-                response.status
-            );
-
-        }
-
-
-        const results =
-            await response.json();
-
-
-        if (
-            !results ||
-            results.length === 0
-        ) {
-
-            throw new Error(
-                "Location not found"
-            );
-
-        }
-
-
-        const result =
-            results[0];
-
-
-        const latitude =
-            Number(result.lat);
-
-        const longitude =
-            Number(result.lon);
-
-
-        if (
-            !Number.isFinite(latitude) ||
-            !Number.isFinite(longitude)
-        ) {
-
-            throw new Error(
-                "Invalid coordinates returned"
-            );
-
-        }
-
-
-        console.log(
-            "FloodWatch searched location:",
-            result.display_name,
-            latitude,
-            longitude
-        );
-
-
-        /* Move whichever existing Leaflet map is available. */
-
-        let targetMap = null;
-
-
-        try {
-
-            if (
-                typeof map1 !== "undefined" &&
-                map1
-            ) {
-
-                targetMap = map1;
-
-            }
-
-        } catch (e) {}
-
-
-        try {
-
-            if (
-                !targetMap &&
-                typeof map !== "undefined" &&
-                map
-            ) {
-
-                targetMap = map;
-
-            }
-
-        } catch (e) {}
-
-
-        try {
-
-            if (
-                !targetMap &&
-                typeof pubMap !== "undefined" &&
-                pubMap
-            ) {
-
-                targetMap = pubMap;
-
-            }
-
-        } catch (e) {}
-
-
-        if (targetMap) {
-
-            targetMap.setView(
-                [
-                    latitude,
-                    longitude
-                ],
-                10
-            );
-
-        }
-
-
-        /* Load nearest CWC information. */
-
-        if (
-            typeof narajLoadLocationData ===
-            "function"
-        ) {
-
-            await narajLoadLocationData(
-                latitude,
-                longitude
-            );
-
-        }
-
-        else if (
-            typeof fetchLocationData ===
-            "function"
-        ) {
-
-            await fetchLocationData(
-                latitude,
-                longitude
-            );
-
-        }
-
-        else {
-
-            console.warn(
-                "No CWC location-data function found."
-            );
-
-        }
-
-
-        input.value =
-            result.display_name;
-
-
-        const status =
-            document.getElementById(
-                "location-status"
-            );
-
-
-        if (status) {
-
-            status.textContent =
-                "Location loaded: " +
-                result.display_name;
-
-            status.className =
-                "location-status success";
-
-        }
-
-
-    }
-
-    catch (error) {
-
-        console.error(
-            "FloodWatch search error:",
-            error
-        );
-
-
-        const status =
-            document.getElementById(
-                "location-status"
-            );
-
-
-        if (status) {
-
-            status.textContent =
-                "Could not find that location. Try another city.";
-
-            status.className =
-                "location-status error";
-
-        }
-
-    }
-
-    finally {
-
-        if (button) {
-
-            button.disabled = false;
-
-            button.textContent =
-                "🔍 Search";
-
-        }
-
-    }
-
-}
-
-
-document.addEventListener(
-    "DOMContentLoaded",
-    function () {
-
-        const input =
-            document.getElementById(
-                "location-search"
-            );
-
-        const button =
-            document.getElementById(
-                "location-search-button"
-            );
-
-
-        if (!input || !button) {
-
-            console.error(
-                "FloodWatch search controls not found."
-            );
-
-            return;
-
-        }
-
-
-        button.addEventListener(
-            "click",
-            floodWatchSearchLocation
-        );
-
-
-        input.addEventListener(
-            "keydown",
-            function (event) {
-
-                if (event.key === "Enter") {
-
-                    event.preventDefault();
-
-                    floodWatchSearchLocation();
-
-                }
-
-            }
-        );
-
-
-        console.log(
-            "FloodWatch search ready."
-        );
-
-    }
-);
-
-</script>
-
-
-<script>
-
-/* =========================================================
-   OVERALL FLOOD RISK
-========================================================= */
-
-async function updateOverallFloodRisk() {
-
-    const value =
-        document.getElementById(
-            "overall-risk-value"
-        );
-
-
-    const details =
-        document.getElementById(
-            "overall-risk-details"
-        );
-
-
-    if (!value || !details) {
-        return;
-    }
-
-
-    try {
-
-        const response =
-            await fetch(
-                "http://127.0.0.1:8000/api/forecast"
-            );
-
-
-        if (!response.ok) {
-
-            throw new Error(
-                "Forecast API HTTP " +
-                response.status
-            );
-
-        }
-
-
-        const data =
-            await response.json();
-
-
-        const forecast =
-            data.forecast || {};
-
-
-        const probabilities = [
-
-            Number(
-                forecast["6h"]
-                    ?.flood_probability_percent
-            ),
-
-            Number(
-                forecast["12h"]
-                    ?.flood_probability_percent
-            ),
-
-            Number(
-                forecast["24h"]
-                    ?.flood_probability_percent
-            )
-
-        ].filter(
-            Number.isFinite
-        );
-
-
-        if (!probabilities.length) {
-
-            throw new Error(
-                "No forecast probabilities returned."
-            );
-
-        }
-
-
-        const maximum =
-            Math.max(
-                ...probabilities
-            );
-
-
-        /*
-         * Overall risk uses the highest predicted
-         * probability across the three forecast horizons.
-         *
-         * LOW      < 25%
-         * MODERATE 25%–<75%
-         * HIGH     >= 75%
-         */
-
-        let risk = "LOW";
-
-        let riskClass = "low";
-
-
-        if (maximum >= 75) {
-
-            risk = "HIGH";
-
-            riskClass = "high";
-
-        }
-
-        else if (maximum >= 25) {
-
-            risk = "MODERATE";
-
-            riskClass = "moderate";
-
-        }
-
-
-        value.textContent =
-            risk;
-
-
-        value.className =
-            "overall-risk-value " +
-            riskClass;
-
-
-        details.textContent =
-            "Highest predicted probability: " +
-            maximum.toFixed(2) +
-            "% across the 6h, 12h and 24h forecasts.";
-
-    }
-
-
-    catch (error) {
-
-        console.error(
-            "Overall flood risk error:",
-            error
-        );
-
-
-        value.textContent =
-            "UNAVAILABLE";
-
-
-        value.className =
-            "overall-risk-value unknown";
-
-
-        details.textContent =
-            "Unable to calculate overall risk from the forecast API.";
-
-    }
-
-}
-
-
-document.addEventListener(
-    "DOMContentLoaded",
-    function () {
-
-        updateOverallFloodRisk();
-
-    }
-);
-
-</script>
 
 
 </body>

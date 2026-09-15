@@ -1,0 +1,59 @@
+{
+  "status": "success",
+  "mode": "latest_available_historical",
+  "model": {
+    "name": "FloodWatch Future Flood Forecast",
+    "algorithm": "Random Forest",
+    "study_region": "Naraj/Cuttack, Odisha",
+    "feature_count": 71
+  },
+  "location": {
+    "latitude": 20.5,
+    "longitude": 85.95,
+    "region": "Naraj/Cuttack, Odisha"
+  },
+  "observation_time": "2025-12-30 23:00:00",
+  "forecast": {
+    "6h": {
+      "horizon_hours": 6,
+      "flood_probability": 0.0,
+      "flood_probability_percent": 0.0,
+      "risk": "LOW",
+      "description": "Low predicted flood risk during this forecast horizon.",
+      "status": "predicted"
+    },
+    "12h": {
+      "horizon_hours": 12,
+      "flood_probability": 0.0,
+      "flood_probability_percent": 0.0,
+      "risk": "LOW",
+      "description": "Low predicted flood risk during this forecast horizon.",
+      "status": "predicted"
+    },
+    "24h": {
+      "horizon_hours": 24,
+      "flood_probability": 0.0,
+      "flood_probability_percent": 0.0,
+      "risk": "LOW",
+      "description": "Low predicted flood risk during this forecast horizon.",
+      "status": "predicted"
+    }
+  },
+  "data_source": {
+    "rainfall": "CWC historical dataset",
+    "water_level": "CWC historical dataset"
+  },
+  "forecast_horizons_hours": [
+    6,
+    12,
+    24
+  ],
+  "warning": "This is an AI/ML flood-risk forecast generated from the latest available CWC observation in the local historical dataset. It is not a live government flood warning.",
+  "model_scope": "The temporal forecasting model was trained using the Naraj/Cuttack study region in Odisha. It should not be interpreted as a fully India-wide calibrated forecasting model.",
+  "overall_risk": {
+    "risk": "LOW",
+    "maximum_probability": 0.0,
+    "maximum_probability_percent": 0.0,
+    "description": "Low predicted flood risk during this forecast horizon."
+  }
+}

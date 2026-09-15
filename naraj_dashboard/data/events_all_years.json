@@ -1,0 +1,707 @@
+{
+  "study_area": "Naraj/Mahanadi",
+  "flood_threshold_m": 24.28,
+  "threshold_rule": "Naraj 95th percentile of the 2021-2025 CWC hourly record (project dataset)",
+  "provenance": {
+    "levels_and_rainfall": "Hugging Face bhoomig0630/flood-inundation-upload (CWC 2021-2025, real records, no synthetic data)",
+    "ndem_events": "NDEM (ndem.nrsc.gov.in) via ramSeraph/india_natural_disasters (CC0) - satellite-verified extents"
+  },
+  "events": [
+    {
+      "id": "fw_20210918",
+      "date": "2021-09-18",
+      "source": "cwc_dataset",
+      "onset": "2021-09-14T18:00:00",
+      "peak_time_utc": "2021-09-18T00:00:00",
+      "duration_hours": 154,
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2021-09-18T00:00:00",
+        "water_level_m": 25.96,
+        "source": "bhoomig0630/flood-inundation-upload ml/data/forecast/forecast_dataset.csv (CWC 2021-2025)"
+      },
+      "hydrology": {
+        "max_24h_rainfall_mm": 64.0,
+        "max_hourly_rise_m": 1.61,
+        "hours_above_threshold": 154
+      },
+      "ndem_inundation": {
+        "status": "NOT_AVAILABLE",
+        "available": false,
+        "note": "Government NDEM extent has not been digitized for this date in this project. Level history and forecast replay are shown instead."
+      },
+      "satellite_evidence": {
+        "status": "NOT_AVAILABLE",
+        "detail": "No Sentinel-1 scene processed for this event in this project."
+      }
+    },
+    {
+      "id": "fw_20220726",
+      "date": "2022-07-26",
+      "source": "cwc_dataset",
+      "onset": "2022-07-25T18:00:00",
+      "peak_time_utc": "2022-07-26T00:00:00",
+      "duration_hours": 34,
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2022-07-26T00:00:00",
+        "water_level_m": 24.33,
+        "source": "bhoomig0630/flood-inundation-upload ml/data/forecast/forecast_dataset.csv (CWC 2021-2025)"
+      },
+      "hydrology": {
+        "max_24h_rainfall_mm": 123.6,
+        "max_hourly_rise_m": 0.16,
+        "hours_above_threshold": 34
+      },
+      "ndem_inundation": {
+        "status": "NOT_AVAILABLE",
+        "available": false,
+        "note": "Government NDEM extent has not been digitized for this date in this project. Level history and forecast replay are shown instead."
+      },
+      "satellite_evidence": {
+        "status": "NOT_AVAILABLE",
+        "detail": "No Sentinel-1 scene processed for this event in this project."
+      }
+    },
+    {
+      "id": "ndem_16aug",
+      "date": "2022-08-16",
+      "target_time_utc": "2022-08-16T00:00:00",
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2022-08-16T00:00:00",
+        "water_level_m": 24.8,
+        "source": "rwl_manual_hr_cwc_005_2021_2025.csv"
+      },
+      "ndem_inundation": {
+        "status": "HISTORICAL",
+        "available": true,
+        "file": "data/ndem/ndem_16aug.geojson",
+        "source": "NDEM (ndem.nrsc.gov.in), redistributed via ramSeraph/india_natural_disasters (GitHub, CC0)",
+        "note": "Government-sourced historical inundation extent, one processing step removed from the official Bhuvan portal (see DATA_ACQUISITION_STATUS.md)"
+      },
+      "satellite_evidence": {
+        "status": "NO SAR COVERAGE",
+        "detail": "No Sentinel-1 acquisition for this exact date in this prototype. SAR analysis (calibration, change detection, candidate mask) is currently demonstrated for the 6-Aug/18-Aug pair only."
+      },
+      "flood_mask_sar_derived": {
+        "status": "NO SAR COVERAGE",
+        "detail": "No SAR-derived candidate mask for this date. The candidate mask exists only for 18-Aug-2022 (see that event)."
+      },
+      "source": "ndem_verified"
+    },
+    {
+      "id": "ndem_18aug",
+      "date": "2022-08-18",
+      "target_time_utc": "2022-08-18T18:00:00",
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2022-08-18T18:00:00",
+        "water_level_m": 26.98,
+        "source": "rwl_manual_hr_cwc_005_2021_2025.csv"
+      },
+      "ndem_inundation": {
+        "status": "HISTORICAL",
+        "available": true,
+        "file": "data/ndem/ndem_18aug.geojson",
+        "source": "NDEM (ndem.nrsc.gov.in), redistributed via ramSeraph/india_natural_disasters (GitHub, CC0)",
+        "note": "Government-sourced historical inundation extent, one processing step removed from the official Bhuvan portal (see DATA_ACQUISITION_STATUS.md)"
+      },
+      "satellite_evidence": {
+        "status": "OBSERVED",
+        "detail": "Sentinel-1A 18-Aug-2022 scene metadata verified (see Sentinel-1 panel); raw digital numbers only, NOT a flood classification"
+      },
+      "flood_mask_sar_derived": {
+        "status": "DERIVED",
+        "detail": "SAR candidate flood mask produced (67.89 km2 within SAR coverage). Validated vs NDEM: IoU=0.14, F1=0.24 (prototype-stage, not operational accuracy)."
+      },
+      "source": "ndem_verified"
+    },
+    {
+      "id": "ndem_19aug",
+      "date": "2022-08-19",
+      "target_time_utc": "2022-08-19T18:00:00",
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2022-08-19T18:00:00",
+        "water_level_m": 26.71,
+        "source": "rwl_manual_hr_cwc_005_2021_2025.csv"
+      },
+      "ndem_inundation": {
+        "status": "HISTORICAL",
+        "available": true,
+        "file": "data/ndem/ndem_19aug.geojson",
+        "source": "NDEM (ndem.nrsc.gov.in), redistributed via ramSeraph/india_natural_disasters (GitHub, CC0)",
+        "note": "Government-sourced historical inundation extent, one processing step removed from the official Bhuvan portal (see DATA_ACQUISITION_STATUS.md)"
+      },
+      "satellite_evidence": {
+        "status": "NO SAR COVERAGE",
+        "detail": "No Sentinel-1 acquisition for this exact date in this prototype. SAR analysis (calibration, change detection, candidate mask) is currently demonstrated for the 6-Aug/18-Aug pair only."
+      },
+      "flood_mask_sar_derived": {
+        "status": "NO SAR COVERAGE",
+        "detail": "No SAR-derived candidate mask for this date. The candidate mask exists only for 18-Aug-2022 (see that event)."
+      },
+      "source": "ndem_verified"
+    },
+    {
+      "id": "ndem_21aug",
+      "date": "2022-08-21",
+      "target_time_utc": "2022-08-21T06:00:00",
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2022-08-21T06:00:00",
+        "water_level_m": 26.35,
+        "source": "rwl_manual_hr_cwc_005_2021_2025.csv"
+      },
+      "ndem_inundation": {
+        "status": "HISTORICAL",
+        "available": true,
+        "file": "data/ndem/ndem_21aug.geojson",
+        "source": "NDEM (ndem.nrsc.gov.in), redistributed via ramSeraph/india_natural_disasters (GitHub, CC0)",
+        "note": "Government-sourced historical inundation extent, one processing step removed from the official Bhuvan portal (see DATA_ACQUISITION_STATUS.md)"
+      },
+      "satellite_evidence": {
+        "status": "NO SAR COVERAGE",
+        "detail": "No Sentinel-1 acquisition for this exact date in this prototype. SAR analysis (calibration, change detection, candidate mask) is currently demonstrated for the 6-Aug/18-Aug pair only."
+      },
+      "flood_mask_sar_derived": {
+        "status": "NO SAR COVERAGE",
+        "detail": "No SAR-derived candidate mask for this date. The candidate mask exists only for 18-Aug-2022 (see that event)."
+      },
+      "source": "ndem_verified"
+    },
+    {
+      "id": "fw_20220923",
+      "date": "2022-09-23",
+      "source": "cwc_dataset",
+      "onset": "2022-09-21T18:00:00",
+      "peak_time_utc": "2022-09-23T00:00:00",
+      "duration_hours": 58,
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2022-09-23T00:00:00",
+        "water_level_m": 24.41,
+        "source": "bhoomig0630/flood-inundation-upload ml/data/forecast/forecast_dataset.csv (CWC 2021-2025)"
+      },
+      "hydrology": {
+        "max_24h_rainfall_mm": 80.6,
+        "max_hourly_rise_m": 1.57,
+        "hours_above_threshold": 58
+      },
+      "ndem_inundation": {
+        "status": "NOT_AVAILABLE",
+        "available": false,
+        "note": "Government NDEM extent has not been digitized for this date in this project. Level history and forecast replay are shown instead."
+      },
+      "satellite_evidence": {
+        "status": "NOT_AVAILABLE",
+        "detail": "No Sentinel-1 scene processed for this event in this project."
+      }
+    },
+    {
+      "id": "fw_20220925",
+      "date": "2022-09-25",
+      "source": "cwc_dataset",
+      "onset": "2022-09-24T18:00:00",
+      "peak_time_utc": "2022-09-25T00:00:00",
+      "duration_hours": 34,
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2022-09-25T00:00:00",
+        "water_level_m": 24.33,
+        "source": "bhoomig0630/flood-inundation-upload ml/data/forecast/forecast_dataset.csv (CWC 2021-2025)"
+      },
+      "hydrology": {
+        "max_24h_rainfall_mm": 41.1,
+        "max_hourly_rise_m": 0.64,
+        "hours_above_threshold": 34
+      },
+      "ndem_inundation": {
+        "status": "NOT_AVAILABLE",
+        "available": false,
+        "note": "Government NDEM extent has not been digitized for this date in this project. Level history and forecast replay are shown instead."
+      },
+      "satellite_evidence": {
+        "status": "NOT_AVAILABLE",
+        "detail": "No Sentinel-1 scene processed for this event in this project."
+      }
+    },
+    {
+      "id": "fw_20230728",
+      "date": "2023-07-28",
+      "source": "cwc_dataset",
+      "onset": "2023-07-27T18:00:00",
+      "peak_time_utc": "2023-07-28T00:00:00",
+      "duration_hours": 34,
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2023-07-28T00:00:00",
+        "water_level_m": 24.31,
+        "source": "bhoomig0630/flood-inundation-upload ml/data/forecast/forecast_dataset.csv (CWC 2021-2025)"
+      },
+      "hydrology": {
+        "max_24h_rainfall_mm": 53.0,
+        "max_hourly_rise_m": 0.45,
+        "hours_above_threshold": 34
+      },
+      "ndem_inundation": {
+        "status": "NOT_AVAILABLE",
+        "available": false,
+        "note": "Government NDEM extent has not been digitized for this date in this project. Level history and forecast replay are shown instead."
+      },
+      "satellite_evidence": {
+        "status": "NOT_AVAILABLE",
+        "detail": "No Sentinel-1 scene processed for this event in this project."
+      }
+    },
+    {
+      "id": "fw_20230803",
+      "date": "2023-08-03",
+      "source": "cwc_dataset",
+      "onset": "2023-08-02T18:00:00",
+      "peak_time_utc": "2023-08-03T00:00:00",
+      "duration_hours": 202,
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2023-08-03T00:00:00",
+        "water_level_m": 26.26,
+        "source": "bhoomig0630/flood-inundation-upload ml/data/forecast/forecast_dataset.csv (CWC 2021-2025)"
+      },
+      "hydrology": {
+        "max_24h_rainfall_mm": 59.0,
+        "max_hourly_rise_m": 2.64,
+        "hours_above_threshold": 202
+      },
+      "ndem_inundation": {
+        "status": "NOT_AVAILABLE",
+        "available": false,
+        "note": "Government NDEM extent has not been digitized for this date in this project. Level history and forecast replay are shown instead."
+      },
+      "satellite_evidence": {
+        "status": "NOT_AVAILABLE",
+        "detail": "No Sentinel-1 scene processed for this event in this project."
+      }
+    },
+    {
+      "id": "fw_20230917",
+      "date": "2023-09-17",
+      "source": "cwc_dataset",
+      "onset": "2023-09-15T18:00:00",
+      "peak_time_utc": "2023-09-17T00:00:00",
+      "duration_hours": 154,
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2023-09-17T00:00:00",
+        "water_level_m": 25.73,
+        "source": "bhoomig0630/flood-inundation-upload ml/data/forecast/forecast_dataset.csv (CWC 2021-2025)"
+      },
+      "hydrology": {
+        "max_24h_rainfall_mm": 53.3,
+        "max_hourly_rise_m": 2.19,
+        "hours_above_threshold": 154
+      },
+      "ndem_inundation": {
+        "status": "NOT_AVAILABLE",
+        "available": false,
+        "note": "Government NDEM extent has not been digitized for this date in this project. Level history and forecast replay are shown instead."
+      },
+      "satellite_evidence": {
+        "status": "NOT_AVAILABLE",
+        "detail": "No Sentinel-1 scene processed for this event in this project."
+      }
+    },
+    {
+      "id": "fw_20230925",
+      "date": "2023-09-25",
+      "source": "cwc_dataset",
+      "onset": "2023-09-23T18:00:00",
+      "peak_time_utc": "2023-09-25T00:00:00",
+      "duration_hours": 130,
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2023-09-25T00:00:00",
+        "water_level_m": 25.52,
+        "source": "bhoomig0630/flood-inundation-upload ml/data/forecast/forecast_dataset.csv (CWC 2021-2025)"
+      },
+      "hydrology": {
+        "max_24h_rainfall_mm": 55.8,
+        "max_hourly_rise_m": 1.02,
+        "hours_above_threshold": 130
+      },
+      "ndem_inundation": {
+        "status": "NOT_AVAILABLE",
+        "available": false,
+        "note": "Government NDEM extent has not been digitized for this date in this project. Level history and forecast replay are shown instead."
+      },
+      "satellite_evidence": {
+        "status": "NOT_AVAILABLE",
+        "detail": "No Sentinel-1 scene processed for this event in this project."
+      }
+    },
+    {
+      "id": "fw_20231003",
+      "date": "2023-10-03",
+      "source": "cwc_dataset",
+      "onset": "2023-10-02T18:00:00",
+      "peak_time_utc": "2023-10-03T00:00:00",
+      "duration_hours": 58,
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2023-10-03T00:00:00",
+        "water_level_m": 24.56,
+        "source": "bhoomig0630/flood-inundation-upload ml/data/forecast/forecast_dataset.csv (CWC 2021-2025)"
+      },
+      "hydrology": {
+        "max_24h_rainfall_mm": 66.0,
+        "max_hourly_rise_m": 0.36,
+        "hours_above_threshold": 58
+      },
+      "ndem_inundation": {
+        "status": "NOT_AVAILABLE",
+        "available": false,
+        "note": "Government NDEM extent has not been digitized for this date in this project. Level history and forecast replay are shown instead."
+      },
+      "satellite_evidence": {
+        "status": "NOT_AVAILABLE",
+        "detail": "No Sentinel-1 scene processed for this event in this project."
+      }
+    },
+    {
+      "id": "fw_20240731",
+      "date": "2024-07-31",
+      "source": "cwc_dataset",
+      "onset": "2024-07-30T18:00:00",
+      "peak_time_utc": "2024-07-31T00:00:00",
+      "duration_hours": 82,
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2024-07-31T00:00:00",
+        "water_level_m": 25.1,
+        "source": "bhoomig0630/flood-inundation-upload ml/data/forecast/forecast_dataset.csv (CWC 2021-2025)"
+      },
+      "hydrology": {
+        "max_24h_rainfall_mm": 166.0,
+        "max_hourly_rise_m": 0.85,
+        "hours_above_threshold": 82
+      },
+      "ndem_inundation": {
+        "status": "NOT_AVAILABLE",
+        "available": false,
+        "note": "Government NDEM extent has not been digitized for this date in this project. Level history and forecast replay are shown instead."
+      },
+      "satellite_evidence": {
+        "status": "NOT_AVAILABLE",
+        "detail": "No Sentinel-1 scene processed for this event in this project."
+      }
+    },
+    {
+      "id": "fw_20240808",
+      "date": "2024-08-08",
+      "source": "cwc_dataset",
+      "onset": "2024-08-06T18:00:00",
+      "peak_time_utc": "2024-08-08T00:00:00",
+      "duration_hours": 154,
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2024-08-08T00:00:00",
+        "water_level_m": 25.52,
+        "source": "bhoomig0630/flood-inundation-upload ml/data/forecast/forecast_dataset.csv (CWC 2021-2025)"
+      },
+      "hydrology": {
+        "max_24h_rainfall_mm": 81.9,
+        "max_hourly_rise_m": 0.96,
+        "hours_above_threshold": 154
+      },
+      "ndem_inundation": {
+        "status": "NOT_AVAILABLE",
+        "available": false,
+        "note": "Government NDEM extent has not been digitized for this date in this project. Level history and forecast replay are shown instead."
+      },
+      "satellite_evidence": {
+        "status": "NOT_AVAILABLE",
+        "detail": "No Sentinel-1 scene processed for this event in this project."
+      }
+    },
+    {
+      "id": "fw_20240827",
+      "date": "2024-08-27",
+      "source": "cwc_dataset",
+      "onset": "2024-08-26T18:00:00",
+      "peak_time_utc": "2024-08-27T00:00:00",
+      "duration_hours": 82,
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2024-08-27T00:00:00",
+        "water_level_m": 24.96,
+        "source": "bhoomig0630/flood-inundation-upload ml/data/forecast/forecast_dataset.csv (CWC 2021-2025)"
+      },
+      "hydrology": {
+        "max_24h_rainfall_mm": 45.3,
+        "max_hourly_rise_m": 0.75,
+        "hours_above_threshold": 82
+      },
+      "ndem_inundation": {
+        "status": "NOT_AVAILABLE",
+        "available": false,
+        "note": "Government NDEM extent has not been digitized for this date in this project. Level history and forecast replay are shown instead."
+      },
+      "satellite_evidence": {
+        "status": "NOT_AVAILABLE",
+        "detail": "No Sentinel-1 scene processed for this event in this project."
+      }
+    },
+    {
+      "id": "fw_20240915",
+      "date": "2024-09-15",
+      "source": "cwc_dataset",
+      "onset": "2024-09-14T18:00:00",
+      "peak_time_utc": "2024-09-15T00:00:00",
+      "duration_hours": 58,
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2024-09-15T00:00:00",
+        "water_level_m": 24.74,
+        "source": "bhoomig0630/flood-inundation-upload ml/data/forecast/forecast_dataset.csv (CWC 2021-2025)"
+      },
+      "hydrology": {
+        "max_24h_rainfall_mm": 57.7,
+        "max_hourly_rise_m": 0.53,
+        "hours_above_threshold": 58
+      },
+      "ndem_inundation": {
+        "status": "NOT_AVAILABLE",
+        "available": false,
+        "note": "Government NDEM extent has not been digitized for this date in this project. Level history and forecast replay are shown instead."
+      },
+      "satellite_evidence": {
+        "status": "NOT_AVAILABLE",
+        "detail": "No Sentinel-1 scene processed for this event in this project."
+      }
+    },
+    {
+      "id": "fw_20240930",
+      "date": "2024-09-30",
+      "source": "cwc_dataset",
+      "onset": "2024-09-29T18:00:00",
+      "peak_time_utc": "2024-09-30T00:00:00",
+      "duration_hours": 58,
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2024-09-30T00:00:00",
+        "water_level_m": 24.64,
+        "source": "bhoomig0630/flood-inundation-upload ml/data/forecast/forecast_dataset.csv (CWC 2021-2025)"
+      },
+      "hydrology": {
+        "max_24h_rainfall_mm": 0.0,
+        "max_hourly_rise_m": 0.6,
+        "hours_above_threshold": 58
+      },
+      "ndem_inundation": {
+        "status": "NOT_AVAILABLE",
+        "available": false,
+        "note": "Government NDEM extent has not been digitized for this date in this project. Level history and forecast replay are shown instead."
+      },
+      "satellite_evidence": {
+        "status": "NOT_AVAILABLE",
+        "detail": "No Sentinel-1 scene processed for this event in this project."
+      }
+    },
+    {
+      "id": "fw_20250709",
+      "date": "2025-07-09",
+      "source": "cwc_dataset",
+      "onset": "2025-07-08T18:00:00",
+      "peak_time_utc": "2025-07-09T00:00:00",
+      "duration_hours": 154,
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2025-07-09T00:00:00",
+        "water_level_m": 24.9,
+        "source": "bhoomig0630/flood-inundation-upload ml/data/forecast/forecast_dataset.csv (CWC 2021-2025)"
+      },
+      "hydrology": {
+        "max_24h_rainfall_mm": 0.0,
+        "max_hourly_rise_m": 1.43,
+        "hours_above_threshold": 154
+      },
+      "ndem_inundation": {
+        "status": "NOT_AVAILABLE",
+        "available": false,
+        "note": "Government NDEM extent has not been digitized for this date in this project. Level history and forecast replay are shown instead."
+      },
+      "satellite_evidence": {
+        "status": "NOT_AVAILABLE",
+        "detail": "No Sentinel-1 scene processed for this event in this project."
+      }
+    },
+    {
+      "id": "fw_20250728",
+      "date": "2025-07-28",
+      "source": "cwc_dataset",
+      "onset": "2025-07-26T18:00:00",
+      "peak_time_utc": "2025-07-28T00:00:00",
+      "duration_hours": 154,
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2025-07-28T00:00:00",
+        "water_level_m": 25.33,
+        "source": "bhoomig0630/flood-inundation-upload ml/data/forecast/forecast_dataset.csv (CWC 2021-2025)"
+      },
+      "hydrology": {
+        "max_24h_rainfall_mm": 8.5,
+        "max_hourly_rise_m": 1.15,
+        "hours_above_threshold": 154
+      },
+      "ndem_inundation": {
+        "status": "NOT_AVAILABLE",
+        "available": false,
+        "note": "Government NDEM extent has not been digitized for this date in this project. Level history and forecast replay are shown instead."
+      },
+      "satellite_evidence": {
+        "status": "NOT_AVAILABLE",
+        "detail": "No Sentinel-1 scene processed for this event in this project."
+      }
+    },
+    {
+      "id": "fw_20250827",
+      "date": "2025-08-27",
+      "source": "cwc_dataset",
+      "onset": "2025-08-26T18:00:00",
+      "peak_time_utc": "2025-08-27T00:00:00",
+      "duration_hours": 130,
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2025-08-27T00:00:00",
+        "water_level_m": 24.63,
+        "source": "bhoomig0630/flood-inundation-upload ml/data/forecast/forecast_dataset.csv (CWC 2021-2025)"
+      },
+      "hydrology": {
+        "max_24h_rainfall_mm": 4.3,
+        "max_hourly_rise_m": 1.02,
+        "hours_above_threshold": 130
+      },
+      "ndem_inundation": {
+        "status": "NOT_AVAILABLE",
+        "available": false,
+        "note": "Government NDEM extent has not been digitized for this date in this project. Level history and forecast replay are shown instead."
+      },
+      "satellite_evidence": {
+        "status": "NOT_AVAILABLE",
+        "detail": "No Sentinel-1 scene processed for this event in this project."
+      }
+    },
+    {
+      "id": "fw_20250907",
+      "date": "2025-09-07",
+      "source": "cwc_dataset",
+      "onset": "2025-09-05T18:00:00",
+      "peak_time_utc": "2025-09-07T00:00:00",
+      "duration_hours": 82,
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2025-09-07T00:00:00",
+        "water_level_m": 25.81,
+        "source": "bhoomig0630/flood-inundation-upload ml/data/forecast/forecast_dataset.csv (CWC 2021-2025)"
+      },
+      "hydrology": {
+        "max_24h_rainfall_mm": 10.7,
+        "max_hourly_rise_m": 1.27,
+        "hours_above_threshold": 82
+      },
+      "ndem_inundation": {
+        "status": "NOT_AVAILABLE",
+        "available": false,
+        "note": "Government NDEM extent has not been digitized for this date in this project. Level history and forecast replay are shown instead."
+      },
+      "satellite_evidence": {
+        "status": "NOT_AVAILABLE",
+        "detail": "No Sentinel-1 scene processed for this event in this project."
+      }
+    },
+    {
+      "id": "fw_20250927",
+      "date": "2025-09-27",
+      "source": "cwc_dataset",
+      "onset": "2025-09-25T18:00:00",
+      "peak_time_utc": "2025-09-27T00:00:00",
+      "duration_hours": 178,
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2025-09-27T00:00:00",
+        "water_level_m": 25.75,
+        "source": "bhoomig0630/flood-inundation-upload ml/data/forecast/forecast_dataset.csv (CWC 2021-2025)"
+      },
+      "hydrology": {
+        "max_24h_rainfall_mm": 0.0,
+        "max_hourly_rise_m": 1.77,
+        "hours_above_threshold": 178
+      },
+      "ndem_inundation": {
+        "status": "NOT_AVAILABLE",
+        "available": false,
+        "note": "Government NDEM extent has not been digitized for this date in this project. Level history and forecast replay are shown instead."
+      },
+      "satellite_evidence": {
+        "status": "NOT_AVAILABLE",
+        "detail": "No Sentinel-1 scene processed for this event in this project."
+      }
+    },
+    {
+      "id": "fw_20251005",
+      "date": "2025-10-05",
+      "source": "cwc_dataset",
+      "onset": "2025-10-04T18:00:00",
+      "peak_time_utc": "2025-10-05T00:00:00",
+      "duration_hours": 58,
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2025-10-05T00:00:00",
+        "water_level_m": 25.02,
+        "source": "bhoomig0630/flood-inundation-upload ml/data/forecast/forecast_dataset.csv (CWC 2021-2025)"
+      },
+      "hydrology": {
+        "max_24h_rainfall_mm": 0.0,
+        "max_hourly_rise_m": 0.98,
+        "hours_above_threshold": 58
+      },
+      "ndem_inundation": {
+        "status": "NOT_AVAILABLE",
+        "available": false,
+        "note": "Government NDEM extent has not been digitized for this date in this project. Level history and forecast replay are shown instead."
+      },
+      "satellite_evidence": {
+        "status": "NOT_AVAILABLE",
+        "detail": "No Sentinel-1 scene processed for this event in this project."
+      }
+    },
+    {
+      "id": "fw_20251008",
+      "date": "2025-10-08",
+      "source": "cwc_dataset",
+      "onset": "2025-10-07T18:00:00",
+      "peak_time_utc": "2025-10-08T00:00:00",
+      "duration_hours": 34,
+      "cwc_observed": {
+        "status": "OBSERVED",
+        "nearest_reading_time": "2025-10-08T00:00:00",
+        "water_level_m": 24.32,
+        "source": "bhoomig0630/flood-inundation-upload ml/data/forecast/forecast_dataset.csv (CWC 2021-2025)"
+      },
+      "hydrology": {
+        "max_24h_rainfall_mm": 0.0,
+        "max_hourly_rise_m": 0.28,
+        "hours_above_threshold": 34
+      },
+      "ndem_inundation": {
+        "status": "NOT_AVAILABLE",
+        "available": false,
+        "note": "Government NDEM extent has not been digitized for this date in this project. Level history and forecast replay are shown instead."
+      },
+      "satellite_evidence": {
+        "status": "NOT_AVAILABLE",
+        "detail": "No Sentinel-1 scene processed for this event in this project."
+      }
+    }
+  ]
+}

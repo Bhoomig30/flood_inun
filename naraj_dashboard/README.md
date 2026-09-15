@@ -1,3 +1,29 @@
+# FloodWatch India — Flood Intelligence Platform
+
+**India-wide flood intelligence platform** built on the project's real CWC
+datasets. The dashboard serves any location in India: search it, use device
+location, or click the map — the nearest real CWC rainfall and river stations,
+model scope, and availability notices all update from a single selected-location
+state.
+
+**Honest scope:** the temporal Random Forest forecast (6h/12h/24h) is calibrated
+on the **Naraj/Cuttack (Mahanadi basin) historical study data** — it is NOT an
+India-wide calibrated model, and the UI says so for every other location.
+Satellite evidence and past-flood events are also study-region datasets and are
+labelled as such.
+
+## India-wide station registry (real data)
+
+`data/india_cwc/stations.json` — **842 CWC stations across 28 states** (808
+telemetry rainfall stations, 2021–2025, state-wise; 34 river-discharge
+stations, 1970–2025), built directly from the real CWC CSVs hosted with the
+project's dataset (Hugging Face: `bhoomig0630/flood-inundation-upload`,
+`ml/data/external/...`). No stations invented, no values imputed. Rebuild with:
+
+```bash
+python3 scripts/build_india_registry.py --src ml/data/external
+```
+
 <!-- # AI-Driven Flood Inundation Analysis & Decision Support System
 
 A local, judge-friendly decision-support dashboard demonstrating a
@@ -169,6 +195,24 @@ The final forecast dataset contains:
 - 6-hour target
 - 12-hour target
 - 24-hour target
+
+**Provenance:** this dataset is published on Hugging Face at
+[`bhoomig0630/flood-inundation-upload`](https://huggingface.co/datasets/bhoomig0630/flood-inundation-upload)
+(`ml/data/forecast/forecast_dataset.csv`) and was built by the `ml/src/`
+pipeline in [`Bhoomig30/flood_inun`](https://github.com/Bhoomig30/flood_inun)
+from real CWC records (10 rain gauges + the Naraj/Alipingal/Nimapara water
+levels, 2021–2025). **No synthetic rows.** The serving Random Forests
+(`ml_train.py` → `data/ml_models/hf_forecast_*.pkl`) train directly on that
+file — see `README_FORECASTING.md` for the chronological-split methodology
+and honest holdout skill report.
+
+**Past-floods register:** `data/events_all_years.json` lists **25 real flood
+events across 2021–2025** — every span where the real CWC record shows Naraj
+above the 24.28 m danger level — plus the 4 satellite-verified NDEM events of
+August 2022 (flagged `NDEM verified`/`SAR`). Events without digitized
+satellite extents honestly show "Not available" rather than borrowing
+another date's flood layer; the map clears any stale layer when such an
+event is selected.
 
 ## API
 
