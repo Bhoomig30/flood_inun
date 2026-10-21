@@ -1,0 +1,11 @@
+{
+  "threshold_db_drop": 3.0,
+  "condition": "valid AND dVV < -T AND dVH < -T AND combined(=avg(dVV,dVH)) < -T",
+  "min_connected_component_pixels": 5,
+  "connected_component_structure": "8-connectivity (3x3 all-ones)",
+  "pixel_size_m": 10,
+  "final_candidate_area_km2": 67.889,
+  "final_candidate_pct_of_valid_aoi": 6.507,
+  "raw_candidate_pixels_pre_filter": 805412,
+  "candidate_pixels_post_filter": 678890
+}

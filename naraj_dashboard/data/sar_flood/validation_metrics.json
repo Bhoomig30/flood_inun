@@ -1,0 +1,19 @@
+{
+  "TP": 102060,
+  "FP": 576830,
+  "FN": 53092,
+  "TN": 9700608,
+  "TP_km2": 10.206,
+  "FP_km2": 57.683,
+  "FN_km2": 5.309,
+  "TN_km2": 970.061,
+  "precision": 0.1503,
+  "recall": 0.6578,
+  "f1": 0.2447,
+  "iou": 0.1394,
+  "ndem_flood_km2_within_sar_coverage": 15.515,
+  "sar_flood_km2_within_sar_coverage": 67.889,
+  "comparison_restricted_to_valid_sar_coverage": true,
+  "ndem_reference_date": "2022-08-18 18:00 IST",
+  "note": "Metrics computed only within the ~64.6% AOI actually covered by both Sentinel-1 scenes; the uncovered ~35% is excluded, not counted as agreement or disagreement."
+}

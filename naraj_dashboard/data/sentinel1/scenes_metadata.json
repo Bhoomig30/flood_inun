@@ -1,0 +1,49 @@
+{
+  "status": "OBSERVED",
+  "note": "Metadata only. Raw Sentinel-1 digital numbers are NOT used as flood classifications anywhere in this prototype.",
+  "scenes": [
+    {
+      "id": "s1_06aug",
+      "role": "pre-flood reference (preferred)",
+      "product_id": "S1A_IW_GRDH_1SDV_20220806T122028_20220806T122053_044432_054D5E",
+      "date": "2022-08-06",
+      "sensing_time_utc": "12:20:28",
+      "platform": "Sentinel-1A",
+      "mode": "IW",
+      "product_type": "GRDH",
+      "polarizations": [
+        "VV",
+        "VH"
+      ],
+      "pass_direction": "ASCENDING",
+      "relative_orbit": 85,
+      "naraj_covered": true,
+      "aoi_coverage_pct": 64.89,
+      "calibration_status": "Calibrated to sigma0 (product-specific LUTs) and noise-corrected (NESZ subtracted); geocoded to EPSG:32645, 10m, AOI-clipped.",
+      "verification_report": "S1_CALIBRATION_INPUT_CHECKLIST.md"
+    },
+    {
+      "id": "s1_18aug",
+      "role": "during-flood scene",
+      "product_id": "S1A_IW_GRDH_1SDV_20220818T122029_20220818T122054_044607_05530F_A329",
+      "date": "2022-08-18",
+      "sensing_time_utc": "12:20:29",
+      "platform": "Sentinel-1A",
+      "mode": "IW",
+      "product_type": "GRDH",
+      "polarizations": [
+        "VV",
+        "VH"
+      ],
+      "pass_direction": "ASCENDING",
+      "relative_orbit": 85,
+      "naraj_covered": true,
+      "aoi_coverage_pct": 64.62,
+      "calibration_status": "Calibrated to sigma0 (product-specific LUTs) and geocoded (EPSG:32645, 10m, AOI-clipped). Not noise-corrected in this pass (LUT file lost to a filename collision after verification -- see SAR_FLOOD_DETECTION_REPORT.md); the 6-Aug/18-Aug pair uses consistent non-noise-corrected processing for methodological validity.",
+      "verification_report": "S1_CALIBRATION_INPUT_CHECKLIST.md"
+    }
+  ],
+  "footprint_overlap_6aug_vs_18aug_pct": 99.95,
+  "flood_mask_status": "DERIVED \u2014 a candidate flood mask has been produced from calibrated Sentinel-1 change detection (67.89 km2, validated against NDEM: IoU=0.14, F1=0.24). Prototype-stage, not an operational flood product.",
+  "verification_report": "SAR_CALIBRATION_EXECUTION_REPORT.md, SAR_FLOOD_DETECTION_REPORT.md"
+}

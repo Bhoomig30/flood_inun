@@ -1,0 +1,10 @@
+{
+  "status": "NEXT INTEGRATION LAYER",
+  "available_layers": [],
+  "message": "No verified infrastructure, population, or asset-exposure geospatial layer has been obtained or verified in this project. This panel shows the intended interface for a future integration -- it is not populated with any invented data.",
+  "planned_layers_if_data_becomes_available": [
+    "Roads / bridges (e.g. Naraj barrage) intersecting the projected/historical inundation extent",
+    "Population or settlement layers within the AOI",
+    "Critical infrastructure (health facilities, embankments) within the AOI"
+  ]
+}

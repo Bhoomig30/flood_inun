@@ -1,0 +1,243 @@
+{
+  "evaluated_on": "held-out TEST split (never used for training or threshold tuning)",
+  "model": "Random Forest, 12 features",
+  "threshold": 0.65,
+  "threshold_tuned_on": "validation split",
+  "test_tiles_in_split": 67,
+  "test_tiles_scored": 66,
+  "test_tiles_missing_from_results": [
+    "277"
+  ],
+  "tiles_not_in_test_split": [],
+  "per_tile": {
+    "mean_iou": 0.5329,
+    "median_iou": 0.581,
+    "mean_f1": 0.6425,
+    "mean_precision": 0.6188,
+    "mean_recall": 0.7287,
+    "tiles": 66
+  },
+  "pooled_pixels": {
+    "iou": 0.7542,
+    "precision": 0.8332,
+    "recall": 0.8883,
+    "f1": 0.8599
+  },
+  "tiles_iou_below_0_5": 28,
+  "tiles_with_under_1pct_flood": 19,
+  "tiles_with_1pct_or_more_flood": {
+    "mean_iou": 0.6314,
+    "median_iou": 0.6375,
+    "mean_f1": 0.7499,
+    "mean_precision": 0.7433,
+    "mean_recall": 0.8021,
+    "tiles": 47,
+    "pooled": {
+      "iou": 0.7622,
+      "precision": 0.8423,
+      "recall": 0.8891,
+      "f1": 0.8651
+    }
+  },
+  "note": "Per-tile IoU treats every tile equally, so tiles with almost no flooding pull it down. Pooled IoU weights tiles by pixels and is dominated by large flooded tiles. Report both.",
+  "per_event": {
+    "BOL": {
+      "country": "Bolivia",
+      "s1_date": "2018/02/15",
+      "per_tile": {
+        "mean_iou": 0.6182,
+        "median_iou": 0.6182,
+        "mean_f1": 0.7641,
+        "mean_precision": 0.6303,
+        "mean_recall": 0.9699,
+        "tiles": 1
+      },
+      "pooled_pixels": {
+        "iou": 0.6182,
+        "precision": 0.6303,
+        "recall": 0.9699,
+        "f1": 0.7641
+      }
+    },
+    "ESP": {
+      "country": "Spain",
+      "s1_date": "2019/09/17",
+      "per_tile": {
+        "mean_iou": 0.5903,
+        "median_iou": 0.5991,
+        "mean_f1": 0.7157,
+        "mean_precision": 0.6157,
+        "mean_recall": 0.9137,
+        "tiles": 10
+      },
+      "pooled_pixels": {
+        "iou": 0.775,
+        "precision": 0.807,
+        "recall": 0.9514,
+        "f1": 0.8732
+      }
+    },
+    "GHA": {
+      "country": "Ghana",
+      "s1_date": "2018/09/18",
+      "per_tile": {
+        "mean_iou": 0.3033,
+        "median_iou": 0.2444,
+        "mean_f1": 0.3757,
+        "mean_precision": 0.3595,
+        "mean_recall": 0.4148,
+        "tiles": 6
+      },
+      "pooled_pixels": {
+        "iou": 0.6162,
+        "precision": 0.7873,
+        "recall": 0.7392,
+        "f1": 0.7625
+      }
+    },
+    "IND": {
+      "country": "India",
+      "s1_date": "2016/08/12",
+      "per_tile": {
+        "mean_iou": 0.6075,
+        "median_iou": 0.5889,
+        "mean_f1": 0.7321,
+        "mean_precision": 0.7752,
+        "mean_recall": 0.7446,
+        "tiles": 9
+      },
+      "pooled_pixels": {
+        "iou": 0.7758,
+        "precision": 0.8499,
+        "recall": 0.8989,
+        "f1": 0.8737
+      }
+    },
+    "KHM": {
+      "country": "Cambodia",
+      "s1_date": "2018/08/05",
+      "per_tile": {
+        "mean_iou": 0.9553,
+        "median_iou": 0.9553,
+        "mean_f1": 0.9771,
+        "mean_precision": 0.9661,
+        "mean_recall": 0.9885,
+        "tiles": 1
+      },
+      "pooled_pixels": {
+        "iou": 0.9553,
+        "precision": 0.9661,
+        "recall": 0.9885,
+        "f1": 0.9771
+      }
+    },
+    "LKA": {
+      "country": "Sri-Lanka",
+      "s1_date": "2017/05/30",
+      "per_tile": {
+        "mean_iou": 0.6946,
+        "median_iou": 0.7418,
+        "mean_f1": 0.7991,
+        "mean_precision": 0.7693,
+        "mean_recall": 0.868,
+        "tiles": 11
+      },
+      "pooled_pixels": {
+        "iou": 0.8882,
+        "precision": 0.9146,
+        "recall": 0.9685,
+        "f1": 0.9408
+      }
+    },
+    "NGA": {
+      "country": "Nigeria",
+      "s1_date": "2018/09/21",
+      "per_tile": {
+        "mean_iou": 0.6299,
+        "median_iou": 0.6299,
+        "mean_f1": 0.7715,
+        "mean_precision": 0.8136,
+        "mean_recall": 0.7391,
+        "tiles": 2
+      },
+      "pooled_pixels": {
+        "iou": 0.6751,
+        "precision": 0.8922,
+        "recall": 0.735,
+        "f1": 0.806
+      }
+    },
+    "PAK": {
+      "country": "Pakistan",
+      "s1_date": "2017/06/28",
+      "per_tile": {
+        "mean_iou": 0.2471,
+        "median_iou": 0.2251,
+        "mean_f1": 0.3418,
+        "mean_precision": 0.4209,
+        "mean_recall": 0.3076,
+        "tiles": 4
+      },
+      "pooled_pixels": {
+        "iou": 0.413,
+        "precision": 0.6078,
+        "recall": 0.563,
+        "f1": 0.5845
+      }
+    },
+    "PRY": {
+      "country": "Paraguay",
+      "s1_date": "2018/10/31",
+      "per_tile": {
+        "mean_iou": 0.5232,
+        "median_iou": 0.5518,
+        "mean_f1": 0.6119,
+        "mean_precision": 0.6303,
+        "mean_recall": 0.6057,
+        "tiles": 10
+      },
+      "pooled_pixels": {
+        "iou": 0.7166,
+        "precision": 0.8315,
+        "recall": 0.8383,
+        "f1": 0.8349
+      }
+    },
+    "SOM": {
+      "country": "Somalia",
+      "s1_date": "2018/05/07",
+      "per_tile": {
+        "mean_iou": 0.3191,
+        "median_iou": 0.2661,
+        "mean_f1": 0.3888,
+        "mean_precision": 0.3937,
+        "mean_recall": 0.5636,
+        "tiles": 4
+      },
+      "pooled_pixels": {
+        "iou": 0.5976,
+        "precision": 0.7106,
+        "recall": 0.7898,
+        "f1": 0.7481
+      }
+    },
+    "USA": {
+      "country": "USA",
+      "s1_date": "2019/05/22",
+      "per_tile": {
+        "mean_iou": 0.5016,
+        "median_iou": 0.4676,
+        "mean_f1": 0.6612,
+        "mean_precision": 0.538,
+        "mean_recall": 0.9051,
+        "tiles": 8
+      },
+      "pooled_pixels": {
+        "iou": 0.5159,
+        "precision": 0.5658,
+        "recall": 0.854,
+        "f1": 0.6807
+      }
+    }
+  }
+}

@@ -1,0 +1,56 @@
+[
+  {
+    "threshold_db_drop": 1.0,
+    "candidate_pixels": 2200579,
+    "area_km2": 220.058,
+    "pct_of_valid_aoi": 21.093
+  },
+  {
+    "threshold_db_drop": 1.5,
+    "candidate_pixels": 1696188,
+    "area_km2": 169.619,
+    "pct_of_valid_aoi": 16.259
+  },
+  {
+    "threshold_db_drop": 2.0,
+    "candidate_pixels": 1305583,
+    "area_km2": 130.558,
+    "pct_of_valid_aoi": 12.514
+  },
+  {
+    "threshold_db_drop": 2.5,
+    "candidate_pixels": 1015849,
+    "area_km2": 101.585,
+    "pct_of_valid_aoi": 9.737
+  },
+  {
+    "threshold_db_drop": 3.0,
+    "candidate_pixels": 805412,
+    "area_km2": 80.541,
+    "pct_of_valid_aoi": 7.72
+  },
+  {
+    "threshold_db_drop": 3.5,
+    "candidate_pixels": 652607,
+    "area_km2": 65.261,
+    "pct_of_valid_aoi": 6.255
+  },
+  {
+    "threshold_db_drop": 4.0,
+    "candidate_pixels": 538884,
+    "area_km2": 53.888,
+    "pct_of_valid_aoi": 5.165
+  },
+  {
+    "threshold_db_drop": 5.0,
+    "candidate_pixels": 377012,
+    "area_km2": 37.701,
+    "pct_of_valid_aoi": 3.614
+  },
+  {
+    "threshold_db_drop": 6.0,
+    "candidate_pixels": 258232,
+    "area_km2": 25.823,
+    "pct_of_valid_aoi": 2.475
+  }
+]

@@ -1,0 +1,21 @@
+{
+  "scene_id": "1017769",
+  "model": "Random Forest",
+  "features": 12,
+  "threshold": 0.65,
+  "flood_percentage": 40.57,
+  "flood_pixels": 106364,
+  "total_pixels": 262144,
+  "polygons": 1210,
+  "validation": {
+    "accuracy": 0.9229,
+    "precision": 0.9547,
+    "recall": 0.9072,
+    "f1": 0.9304,
+    "iou": 0.8698,
+    "false_positive_rate": 0.0564,
+    "false_negative_rate": 0.0928
+  },
+  "validation_split": "TRAIN",
+  "validation_note": "Scene 1017769 is listed in ml/data/split/train.txt, so these scores are on a TRAINING scene and are NOT held-out accuracy. Held-out test results: data/ai_flood/test_set_metrics.json"
+}

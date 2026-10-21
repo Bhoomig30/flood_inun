@@ -1,0 +1,14 @@
+{
+  "name": "floodwatch-dashboard",
+  "version": "2.0.0",
+  "description": "FloodWatch - Flood Intelligence Dashboard with 6/12/24h AI flood prediction",
+  "private": true,
+  "scripts": {
+    "start": "node naraj_dashboard/server.js",
+    "dev": "node naraj_dashboard/server.js",
+    "api:python": "python3 naraj_dashboard/api/main.py"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
