@@ -1,7 +1,7 @@
 {
   "version": 3,
   "project": "FloodWatch",
-  "trained_at": "2026-09-13T15:30:02.482749+00:00",
+  "trained_at": "2026-11-02T17:23:55.206943+00:00",
   "model_type": "RandomForestClassifier + sigmoid calibration",
   "task": "future flood forecasting (probability that Naraj exceeds danger level)",
   "data_source": {
