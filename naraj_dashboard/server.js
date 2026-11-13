@@ -195,6 +195,27 @@ async function handleRequest(req, res) {
     try {
       datasetStatus.data_notice = locationLookup(20.5, 85.95).data_notice;
     } catch (err) { /* non-fatal */ }
+    // Ingestion health: never present an old anchor as current observations.
+    let dataFreshness = { status: "not_run" };
+    try {
+      const ingest = JSON.parse(
+        fs.readFileSync(path.join(__dirname, "data", "cwc", "ingestion_status.json"), "utf8")
+      );
+      dataFreshness = {
+        latest_observation: ingest.latest_observation || null,
+        age_days: ingest.age_days === undefined ? null : ingest.age_days,
+        stale: ingest.stale === true,
+        stale_after_days: ingest.stale_after_days,
+        last_ingestion_utc: ingest.last_run_utc || null,
+        water_levels_source: ingest.source ? ingest.source.water_levels : null,
+        blockers: Array.isArray(ingest.blockers) ? ingest.blockers : [],
+      };
+    } catch (err) {
+      dataFreshness = {
+        status: "not_run",
+        hint: "run python3 scripts/ingest_cwc.py --once to refresh CWC observations",
+      };
+    }
     return sendJSON(res, 200, {
       status: "online",
       service: "FloodWatch Flood Intelligence API",
@@ -204,6 +225,7 @@ async function handleRequest(req, res) {
       forecast_engine: predictor.loaded ? "ready" : "not_loaded",
       forecast_status: predictor.loaded ? "ready" : "not_loaded",
       ml_model: modelInfoStatus,
+      data_freshness: dataFreshness,
       station_registry: registryStatus,
       datasets: {
         india_cwc_registry: registryStatus.loaded ? "available" : "unavailable",

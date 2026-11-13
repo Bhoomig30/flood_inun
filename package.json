@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node naraj_dashboard/server.js",
     "dev": "node naraj_dashboard/server.js",
-    "api:python": "python3 naraj_dashboard/api/main.py"
+    "api:python": "python3 naraj_dashboard/api/main.py",
+    "ingest:cwc": "python3 scripts/ingest_cwc.py --once",
+    "ingest:cwc:watch": "python3 scripts/ingest_cwc.py --watch --interval-minutes 360"
   },
   "engines": {
     "node": ">=18"

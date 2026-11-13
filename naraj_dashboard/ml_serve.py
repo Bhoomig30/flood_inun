@@ -70,10 +70,35 @@ def load_dataset():
 BUNDLES = None
 DF = None
 FEATURES = None
+DATASET_MTIME = None
+
+
+def refresh_dataset():
+    """Reload the feature frame when ingestion rewrites it (no restart needed)."""
+    global DF, DATASET_MTIME
+    if DF is None or not DATASET.exists():
+        return
+    mtime = DATASET.stat().st_mtime
+    if DATASET_MTIME is None or mtime == DATASET_MTIME:
+        DATASET_MTIME = mtime
+        return
+    try:
+        frame = load_dataset()
+        missing = [c for c in FEATURES if c not in frame.columns]
+        if missing:
+            raise RuntimeError(f"refreshed dataset missing features: {missing[:5]}")
+        DF = frame
+        DATASET_MTIME = mtime
+        sys.stderr.write(f"[ml_serve] dataset reloaded: {len(DF)} rows, ends {DF.timestamp.iloc[-1]}\n")
+        sys.stderr.flush()
+    except Exception as exc:  # keep serving the previous frame rather than failing
+        sys.stderr.write(f"[ml_serve] dataset reload skipped: {exc}\n")
+        sys.stderr.flush()
 
 
 def predict(reference_time):
     global BUNDLES, DF, FEATURES
+    refresh_dataset()
     if reference_time is None or str(reference_time).strip().lower() in ("null", "none", ""):
         row = DF.iloc[-1]
         as_of = str(row["timestamp"])
@@ -87,8 +112,9 @@ def predict(reference_time):
                 "ok": False,
                 "error": f"reference_time {ts} outside real dataset range "
                          f"[{DF.timestamp.iloc[0]} .. {DF.timestamp.iloc[-1]}]",
-                "hint": "The real CWC dataset ends 2025-12-30 23:00; the latest "
-                        "available observation is used for live forecasts.",
+                "hint": f"The served dataset ends {DF.timestamp.iloc[-1]}; the latest "
+                        "available observation is used until scripts/ingest_cwc.py "
+                        "ingests newer CWC records.",
             }
         row = DF.iloc[idx[-1]]
         as_of = str(row["timestamp"])
@@ -105,10 +131,11 @@ def predict(reference_time):
 
 
 def main_serve():
-    global BUNDLES, DF, FEATURES
+    global BUNDLES, DF, FEATURES, DATASET_MTIME
     try:
         BUNDLES = load_models()
         DF = load_dataset()
+        DATASET_MTIME = DATASET.stat().st_mtime
         FEATURES = BUNDLES[HORIZONS[0]]["features"]
         missing = [c for c in FEATURES if c not in DF.columns]
         if missing:

@@ -23,6 +23,9 @@ ml/models/
 # Node
 node_modules/
 
+# Ingestion cache (scripts/ingest_cwc.py)
+.cache/
+
 # Logs
 *.log
 
@@ -31,3 +34,6 @@ node_modules/
 Thumbs.db
 
 ml/data/
+
+# Run artifacts (screenshots, ad-hoc outputs)
+artifacts/

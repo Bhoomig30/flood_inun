@@ -1,0 +1,45 @@
+{
+ "last_run_utc": "2026-11-12T18:55:56+00:00",
+ "source": {
+  "rainfall": "https://huggingface.co/datasets/bhoomig0630/flood-inundation-upload/resolve/main/ml/data/external/rainfall/CWC_Rainfall_India_2021_2025/state_wise/Odisha_2021_2025.csv",
+  "rainfall_staged_to": "/workspace/chats/17d9417fae274b2673052267/ml/data/external/rainfall/CWC_Rainfall_India_2021_2025/state_wise/Odisha_2021_2025.csv",
+  "water_levels": null
+ },
+ "rainfall_rows": null,
+ "stations": {
+  "naraj": {
+   "file": "naraj_daily_2021_2025.json",
+   "records_before": 1801,
+   "added": 0,
+   "latest_observation": "2025-12-31",
+   "status": "no_observations_in_source"
+  },
+  "alipingal": {
+   "file": "alipingal_daily_2021_2025.json",
+   "records_before": 1801,
+   "added": 0,
+   "latest_observation": "2025-12-31",
+   "status": "no_observations_in_source"
+  },
+  "nimapara": {
+   "file": "nimapara_daily_2021_2025.json",
+   "records_before": 1801,
+   "added": 0,
+   "latest_observation": "2025-12-31",
+   "status": "no_observations_in_source"
+  }
+ },
+ "observations_added": 0,
+ "latest_observation": "2025-12-31",
+ "age_days": 316,
+ "stale": true,
+ "stale_after_days": 2.0,
+ "dataset": {
+  "rebuilt": false,
+  "skipped": "no new observations (anchor unchanged)"
+ },
+ "blockers": [
+  "no water-level source supplied (--levels-csv); the CWC manual hourly water-level export is not in the Hugging Face dataset",
+  "newest water-level observation is 2025-12-31 (316 days old); supply a current CWC export via --levels-csv to move the forecast anchor"
+ ]
+}
