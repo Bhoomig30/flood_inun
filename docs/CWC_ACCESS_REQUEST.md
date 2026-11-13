@@ -1,59 +1,93 @@
 # Request for CWC water-level data access
 
-A message you can send to whoever controls the CWC data you need (portal
-administrator, India-WRIS / data.gov.in contact, regional office, or a data
-vendor). Replace the bracketed placeholders before sending; nothing here is a
-real contact address.
+**Status: draft, not sent.** There is no verified recipient address in this
+repository, and this project cannot send e-mail. Replace every bracketed
+placeholder before using this text. A plain-text version for the e-mail body is
+in [`CWC_ACCESS_REQUEST_EMAIL.txt`](CWC_ACCESS_REQUEST_EMAIL.txt).
 
-Everything below is based on what the repository already holds and what
-`scripts/ingest_cwc.py` already accepts.
-
----
-
-## Short version (paste into an e-mail)
-
-> **Subject: Request for hourly water-level observations — Naraj, Alipingal and Nimapara (Mahanadi basin, Odisha), 2021 to present**
->
-> Dear [name / team],
->
-> We maintain FloodWatch, a research dashboard that models flood risk at three
-> Central Water Commission gauges in the Mahanadi delta: **Naraj** (Mahanadi,
-> Cuttack), **Alipingal** (Dhaniya, Jagatsinghpur) and **Nimapara** (Dandia,
-> Puri). We already hold verified hourly readings for August 2022 and daily
-> means from 2021 to 2025, and we would like to extend the hourly record to the
-> present.
->
-> Could you tell us the supported way to obtain, on an ongoing basis, **hourly
-> water level (metres) for these three stations from 1 January 2021 to the
-> current day**, ideally with the gauge datum, danger level and any warning
-> thresholds? A CSV export, a documented download URL, an API key for the
-> portal, or a scheduled export would all work — our importer reads a CSV from a
-> path or an HTTPS URL, so no software change is needed on our side.
->
-> We would also welcome a price or process note if this requires a paid
-> subscription, and guidance on how you would like the data credited.
->
-> Thank you,
-> [name, role, organisation, contact]
+Everything below is derived from files in this repository: the CWC station
+registry (`naraj_dashboard/data/india_cwc/stations.json`), the stored
+water-level series (`naraj_dashboard/data/cwc/`) and the importer
+(`scripts/ingest_cwc.py`). No contact details, prices or service levels are
+invented here.
 
 ---
 
-## What is needed, precisely
+## 1. What the dashboard is
 
-| Item | Requested | Why this exact thing |
-| --- | --- | --- |
-| Stations | **Naraj** (Mahanadi, Cuttack, 20.4717 N 85.7656 E), **Alipingal** (Dhaniya, Jagatsinghpur, 20.1289 N 86.1355 E), **Nimapara** (Dandia, Puri, 20.0833 N 86.0000 E) | These are the three stations with verified series in our data; the model is calibrated on them |
-| Variable | Hourly **water level in metres** | The model's features (`rise_6h/12h/24h`, `trend_3h`) need sub-daily change |
-| Also useful | Gauge zero / datum reference, danger level, warning and evacuation thresholds | Without the datum the metres cannot be compared across sources; the flood label needs the official threshold |
-| Optional | Hourly rainfall (mm) at the same stations, discharge (m³/s) | Rainfall is currently taken from a separate public dataset; native station rainfall would remove a join |
-| Time range | **1 January 2021 → present**, then ongoing | Our stored record starts 2021-01-01; we need everything after 2025-12-31 to move the anchor |
-| Resolution | **Hourly** (manual hourly readings are fine) | Daily-only data cannot replace the hourly series (see below) |
-| Frequency | Daily, or every 6 hours | Matches the ingestion scheduler; a once-a-day export is enough for a working freshness indicator |
-| Format | CSV, UTF-8, one row per station-hour, ISO-8601 or `YYYY-MM-DD HH:MM` timestamps | `scripts/ingest_cwc.py --levels-csv` already parses this |
-| Access | Any of: portal account, API key, documented URL, SFTP drop, periodic e-mail export | All are supported by the existing importer except e-mail, which would need a manual save to disk |
-| Volume | ≈26,000 rows per station for five years at hourly resolution | Small; a single file per station or per year is fine |
+FloodWatch is a research / decision-support dashboard for Indian riverine flood
+risk. It shows observed rainfall and river data for **842 CWC stations across 28
+states** and produces a 6/12/24-hour flood forecast where a verified model or
+series exists. It is **not** an official flood-warning service and does not
+present its output as one.
 
-### Format example (structure only — the values are placeholders, not data)
+## 2. What we already hold (measured, not estimated)
+
+| Item | Value in this repository |
+| --- | --- |
+| Registry stations | 842 in 28 states — 808 telemetry rainfall gauges, 34 river-discharge gauges |
+| Verified hourly water-level series | 3 stations (Naraj, Alipingal, Nimapara — Mahanadi basin, Odisha) for August 2022 |
+| Verified daily water-level series | The same 3 stations, 2021–2025 |
+| Forecast record end | 2025-12-30 23:00 UTC — **318 days stale** on 2026-11-13, and labelled as such in the UI |
+| Registry rainfall observations | 694 stations carry a latest observation; Naraj alone has 28,467 hourly values |
+| Registry river observations | 34 river stations, 31 with observations in 2025, 1,198–70,319 values each — **discharge in m³/s, not water level** |
+
+The model headline is anchored to the newest row of the stored dataset. A newer
+observation extends the forecast without retraining; there is no software
+blocker, only a data gap.
+
+## 3. Request A — extend the three existing series (highest priority)
+
+For **Naraj** (Mahanadi, Cuttack, 20.4717 N 85.7656 E), **Alipingal** (Dhaniya,
+Jagatsinghpur, 20.1289 N 86.1355 E) and **Nimapara** (Dandia, Puri, 20.0833 N
+86.0000 E):
+
+- **hourly water level in metres, 1 January 2021 → present, then ongoing**;
+- the **gauge datum / zero** so metres are comparable across sources;
+- the **official warning, danger and evacuation levels** for each gauge;
+- if available, the same-period hourly rainfall and discharge at these sites.
+
+Hourly resolution matters: the statistical engine needs sub-daily change, and
+the daily means we hold cannot substitute for it.
+
+## 4. Request B — prioritised national expansion
+
+The dashboard is national, but only the Mahanadi stations have a verified
+water-level series. To extend coverage honestly rather than borrowing one
+station's numbers for another, we ask for water level at the stations below.
+
+**Selection rule (registry fields only):** `kind == "river"` (the only stations
+with a sub-daily hydrological series), ordered by `n_obs`, with state spread.
+No station is included for any reason not measurable in the registry. The
+registry records **discharge (m³/s)** for these sites, not level — which is
+exactly why level, datum and thresholds are part of the request.
+
+| Priority | Station | State | Registry `n_obs` | First obs | Last obs |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Karnaprayag (P) | Uttarakhand | 70,319 | 2023-06-07 | 2025-12-26 |
+| 2 | Marchula_1 | Uttarakhand | 70,188 | 2022-08-04 | 2025-12-31 |
+| 3 | Lambagarh | Uttarakhand | 68,870 | 2023-06-19 | 2025-12-19 |
+| 4 | Dhamkund_1 | Jammu & Kashmir | 67,116 | 2023-08-18 | 2025-12-22 |
+| 5 | Koteshwar | Uttarakhand | 65,677 | 2023-04-11 | 2025-12-23 |
+| 6 | Drass_1 | Ladakh | 64,140 | 2023-07-03 | 2025-09-22 |
+| 7 | Ziro | Arunachal Pradesh | 64,097 | 2023-06-19 | 2025-09-22 |
+| 8 | Changlang | Arunachal Pradesh | 58,372 | 2023-10-31 | 2025-09-22 |
+
+If a smaller first transfer is easier, the eight stations above cover four
+states and four hydrological regimes (Himalayan, trans-Himalayan, north-eastern
+and — with Request A — eastern delta). Any additional river gauge with a
+comparable record is welcome; the full list of 34 is in the registry.
+
+## 5. Format and delivery
+
+| Item | Requested |
+| --- | --- |
+| Variable | Water level (m), plus datum and warning/danger/evacuation thresholds |
+| Range | 2021-01-01 → present, then ongoing |
+| Resolution | Hourly (manual hourly readings are acceptable) |
+| Frequency | Daily or every 6 hours |
+| Structure | CSV, UTF-8, one row per station-hour, ISO-8601 or `YYYY-MM-DD HH:MM` timestamps |
+| Delivery | Portal account, API key, documented URL, SFTP drop, or periodic export |
 
 ```csv
 station,timestamp,water_level_m,datum_m,danger_level_m
@@ -61,43 +95,31 @@ Naraj,2025-12-31 00:00:00,<value>,<gauge zero>,<threshold>
 Naraj,2025-12-31 01:00:00,<value>,<gauge zero>,<threshold>
 ```
 
-Our importer also accepts the column layout of the export that produced our
-existing files (`rwl_manual_hr_cwc_005_2021_2025.csv`); matching that layout
-means a zero-configuration import.
+The values above are placeholders, not data. Our importer already reads a CSV
+from a local path or an HTTPS URL (`scripts/ingest_cwc.py --levels-csv`), so no
+software change is needed on our side.
 
----
+## 6. What we will and will not do
 
-## Why we are asking
-
-- The dashboard's forecasts currently **replay a record that ends
-  2025-12-30 23:00 UTC**. As of 2026-11-13 that is about **318 days old**, and
-  the interface labels every forecast as stale. With an ongoing hourly feed the
-  same models would describe current conditions.
-- The machine-learning headline is anchored to the newest row in our dataset. A
-  newer row means a current forecast; no retraining is required to consume it.
-- The statistical engine additionally needs **hourly** history. It currently
-  stops at August 2022 because that is the only hourly file we hold. Our
-  in-repo `forecast_dataset.csv` indexes hours but repeats a single value per
-  day, so it cannot stand in for hourly observations.
-- The project is a research / decision-support dashboard. It is **not** an
-  official flood warning service and will not be presented as one.
-
----
-
-## What we will and will not do with it
-
-- **Will**: store it locally, compute forecasts, and show the observation time
-  and age in the interface so users always know how current the data is.
+- **Will**: store the data locally, compute forecasts, and display the
+  observation timestamp and its age so users can judge currency.
+- **Will**: display the attribution and any disclaimer required, and accept a
+  licence or terms of use before the first transfer.
 - **Will not**: redistribute the raw feed, publish it, or present derived
   products as official CWC warnings.
-- We are happy to display the attribution and any disclaimer you require, and to
-  accept a licence or terms of use before the first transfer.
 
----
+## 7. Why this matters for accuracy
 
-## Implementation note (for us, not for the recipient)
+- Every forecast is currently labelled **stale** because the record ends
+  2025-12-30 23:00 UTC. An ongoing feed makes the same models describe current
+  conditions.
+- Hourly history is required to move the legacy engine past its August-2022
+  anchor; the in-repo dataset repeats one value per day and cannot stand in.
+- Stations without a verified series are shown as **metadata only** today. Real
+  series would let the dashboard add them as genuine tier-2 coverage, without
+  inventing probabilities.
 
-Once a source exists, no code change is required for a CSV:
+## 8. Implementation note (internal)
 
 ```bash
 python3 scripts/ingest_cwc.py --once --levels-csv <path-or-url> --dry-run   # prove the parse
@@ -105,6 +127,15 @@ python3 scripts/ingest_cwc.py --once --levels-csv <path-or-url>             # wr
 python3 scripts/ingest_cwc.py --watch --interval-minutes 360                # keep it current
 ```
 
-The importer appends only newer observations, never rewrites history, rebuilds
-the feature frame, and records `data/cwc/ingestion_status.json`, which
+The importer appends newer observations, never rewrites history, rebuilds the
+feature frame, and records `data/cwc/ingestion_status.json` (gitignored), which
 `/api/health` and the forecast card read.
+
+## 9. What is not verified
+
+- No recipient address, contact person or data-access process is confirmed in
+  this repository; `[RECIPIENT]` must be filled from an authoritative CWC /
+  India-WRIS source before sending.
+- No e-mail has been sent from this project and no reply has been received.
+- The station counts and observation ranges above are copied from the committed
+  registry (generated 2026-09-14); re-check them if the registry is rebuilt.

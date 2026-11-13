@@ -1,0 +1,58 @@
+To: [RECIPIENT]
+Subject: Request for CWC water-level data — Naraj/Alipingal/Nimapara and 8 priority river gauges
+
+Dear [RECIPIENT],
+
+I am [YOUR NAME] from [YOUR ORGANISATION]. We maintain FloodWatch, a research
+and decision-support dashboard for riverine flood risk in India. It currently
+shows observed rainfall and river data for 842 CWC stations across 28 states,
+and produces a 6/12/24-hour forecast where we hold a verified model or series.
+It is not an official flood-warning service and is not presented as one.
+
+We hold verified hourly water level for three Mahanadi-basin gauges (Naraj,
+Alipingal, Nimapara) for August 2022, and daily means for 2021-2025. Because
+that record ends on 2025-12-30, every forecast on the dashboard is labelled
+stale. We would like to request access to current data.
+
+Request A - the three existing stations
+Hourly water level in metres from 1 January 2021 to the present, and ongoing
+thereafter, for:
+  - Naraj (Mahanadi, Cuttack, 20.4717 N 85.7656 E)
+  - Alipingal (Dhaniya, Jagatsinghpur, 20.1289 N 86.1355 E)
+  - Nimapara (Dandia, Puri, 20.0833 N 86.0000 E)
+We also need the gauge datum/zero and the official warning, danger and
+evacuation levels, so the readings can be compared across sources and labelled
+against the correct threshold.
+
+Request B - eight priority river gauges for national coverage
+The dashboard is national, but only the Mahanadi stations have a verified
+water-level series. Our registry lists 34 river gauges with sub-daily records;
+the eight below have the longest records and span four states. We request the
+same variables for them:
+  Karnaprayag (P), Uttarakhand
+  Marchula_1, Uttarakhand
+  Lambagarh, Uttarakhand
+  Dhamkund_1, Jammu & Kashmir
+  Koteshwar, Uttarakhand
+  Drass_1, Ladakh
+  Ziro, Arunachal Pradesh
+  Changlang, Arunachal Pradesh
+
+Format and delivery
+A CSV with one row per station-hour (station, timestamp, water level in metres,
+datum, danger level), UTF-8, ISO-8601 timestamps, delivered daily or every six
+hours through a portal account, API key, documented URL, SFTP drop or periodic
+export would all work with our importer. Hourly resolution is important: our
+statistical engine needs sub-daily change, and daily means cannot replace it.
+
+If this requires a paid subscription or a formal data-sharing agreement, please
+send the process and pricing. We are happy to display the attribution and any
+disclaimer you require, and we will not redistribute the raw feed or present
+derived products as official CWC warnings.
+
+Thank you for your time. We are glad to provide more detail about the models
+and how the data would be stored and credited.
+
+Yours sincerely,
+[YOUR NAME]
+[YOUR ORGANISATION]
