@@ -1009,7 +1009,23 @@ async function loadFloodForecast() {
         data.location && data.location.station
           ? data.location.station
           : "Naraj";
-      var obsHtml = "<strong>" + escapeHtml(stationLabel) +
+      // Freshness: the series ends in the past, so say so on the card itself.
+      var fresh = data.observation_freshness || null;
+      var freshHtml = "";
+      if (fresh && fresh.latest_observation) {
+        var obsStamp = String(fresh.latest_observation).slice(0, 16).replace("T", " ");
+        var ageLabel =
+          fresh.age_days === null || fresh.age_days === undefined
+            ? "age unknown"
+            : fresh.age_days + " days old";
+        freshHtml = fresh.stale
+          ? '<span class="freshness-badge is-stale">⚠ STALE DATA: latest observation ' +
+            escapeHtml(obsStamp) + " UTC (" + escapeHtml(ageLabel) +
+            "; stale past " + escapeHtml(String(fresh.threshold_hours)) + " h)</span> "
+          : '<span class="freshness-badge is-fresh">Latest observation ' +
+            escapeHtml(obsStamp) + " UTC (" + escapeHtml(ageLabel) + ")</span> ";
+      }
+      var obsHtml = freshHtml + "<strong>" + escapeHtml(stationLabel) +
         " · Observation basis:</strong> " +
         escapeHtml(observationTime.slice(0, 16).replace("T", " ")) + " UTC";
       if (typeof observed.water_level_m === "number") {

@@ -1,0 +1,237 @@
+{
+ "generated_at": "2026-11-13T16:27:39+00:00",
+ "dataset": {
+  "path": "naraj_dashboard/data/hf/forecast_dataset.csv",
+  "rows": 43800,
+  "start": "2021-01-01 00:00:00",
+  "end": "2025-12-30 23:00:00"
+ },
+ "split": {
+  "method": "chronological (70/15/15, identical to ml_train.py)",
+  "test_rows": 6570,
+  "test_start": "2025-04-01 06:00:00",
+  "test_end": "2025-12-30 23:00:00"
+ },
+ "label": {
+  "threshold_m": 24.28,
+  "rule": "Naraj 95th percentile of 2021-2025 hourly record"
+ },
+ "baselines": {
+  "persistence_threshold": {
+   "definition": "predict flood if the current naraj_water_level_m >= 24.28 m (no rise assumed)",
+   "test": {
+    "6h": {
+     "rows": 6570,
+     "positives": 755,
+     "brier": 0.0075,
+     "mean_predicted_p": 0.1096,
+     "roc_auc": 0.9716,
+     "pr_auc": 0.9416,
+     "precision": 0.9903,
+     "f1": 0.9668,
+     "recall": 0.9444,
+     "confusion_at_0.5": {
+      "tn": 5808,
+      "fp": 7,
+      "fn": 42,
+      "tp": 713
+     }
+    },
+    "12h": {
+     "rows": 6570,
+     "positives": 797,
+     "brier": 0.0139,
+     "mean_predicted_p": 0.1096,
+     "roc_auc": 0.9467,
+     "pr_auc": 0.8987,
+     "precision": 0.9903,
+     "f1": 0.94,
+     "recall": 0.8946,
+     "confusion_at_0.5": {
+      "tn": 5766,
+      "fp": 7,
+      "fn": 84,
+      "tp": 713
+     }
+    },
+    "24h": {
+     "rows": 6570,
+     "positives": 881,
+     "brier": 0.0266,
+     "mean_predicted_p": 0.1096,
+     "roc_auc": 0.904,
+     "pr_auc": 0.827,
+     "precision": 0.9903,
+     "f1": 0.8907,
+     "recall": 0.8093,
+     "confusion_at_0.5": {
+      "tn": 5682,
+      "fp": 7,
+      "fn": 168,
+      "tp": 713
+     }
+    }
+   }
+  },
+  "persistence_linear_rise": {
+   "definition": "predict flood if naraj_water_level_m + its observed {{h}}h change >= 24.28 m (linear extrapolation of the recent trend, clipped at no change)",
+   "test": {
+    "6h": {
+     "rows": 6570,
+     "positives": 755,
+     "brier": 0.0093,
+     "mean_predicted_p": 0.1114,
+     "roc_auc": 0.9706,
+     "pr_auc": 0.9263,
+     "precision": 0.974,
+     "f1": 0.959,
+     "recall": 0.9444,
+     "confusion_at_0.5": {
+      "tn": 5796,
+      "fp": 19,
+      "fn": 42,
+      "tp": 713
+     },
+     "change_feature": "naraj_water_level_m_change_6h",
+     "change_nan_filled_zero": 0
+    },
+    "12h": {
+     "rows": 6570,
+     "positives": 797,
+     "brier": 0.0175,
+     "mean_predicted_p": 0.1132,
+     "roc_auc": 0.9446,
+     "pr_auc": 0.8701,
+     "precision": 0.9583,
+     "f1": 0.9254,
+     "recall": 0.8946,
+     "confusion_at_0.5": {
+      "tn": 5742,
+      "fp": 31,
+      "fn": 84,
+      "tp": 713
+     },
+     "change_feature": "naraj_water_level_m_change_12h",
+     "change_nan_filled_zero": 0
+    },
+    "24h": {
+     "rows": 6570,
+     "positives": 881,
+     "brier": 0.0339,
+     "mean_predicted_p": 0.1169,
+     "roc_auc": 0.8998,
+     "pr_auc": 0.7769,
+     "precision": 0.9284,
+     "f1": 0.8648,
+     "recall": 0.8093,
+     "confusion_at_0.5": {
+      "tn": 5634,
+      "fp": 55,
+      "fn": 168,
+      "tp": 713
+     },
+     "change_feature": "naraj_water_level_m_change_24h",
+     "change_nan_filled_zero": 0
+    }
+   }
+  }
+ },
+ "rf_reference": {
+  "source": "hf_forecast_metadata.json test block (same split and rows)",
+  "test": {
+   "6h": {
+    "rows": 6570,
+    "positives": 755,
+    "brier": 0.0227,
+    "mean_predicted_p": 0.0933,
+    "roc_auc": 0.9921,
+    "pr_auc": 0.9736,
+    "precision": 0.987,
+    "f1": 0.8861,
+    "recall": 0.804,
+    "hit_rate_at_HIGH": 0.7885,
+    "false_alarm_mean_p_on_safe_hours": 0.0031,
+    "confusion_at_0.5": {
+     "tn": 5807,
+     "fp": 8,
+     "fn": 148,
+     "tp": 607
+    }
+   },
+   "12h": {
+    "rows": 6570,
+    "positives": 797,
+    "brier": 0.03,
+    "mean_predicted_p": 0.0924,
+    "roc_auc": 0.99,
+    "pr_auc": 0.9479,
+    "precision": 0.9868,
+    "f1": 0.8525,
+    "recall": 0.7503,
+    "hit_rate_at_HIGH": 0.7311,
+    "false_alarm_mean_p_on_safe_hours": 0.0042,
+    "confusion_at_0.5": {
+     "tn": 5765,
+     "fp": 8,
+     "fn": 199,
+     "tp": 598
+    }
+   },
+   "24h": {
+    "rows": 6570,
+    "positives": 881,
+    "brier": 0.0418,
+    "mean_predicted_p": 0.093,
+    "roc_auc": 0.9825,
+    "pr_auc": 0.9154,
+    "precision": 0.9869,
+    "f1": 0.8083,
+    "recall": 0.6844,
+    "hit_rate_at_HIGH": 0.6622,
+    "false_alarm_mean_p_on_safe_hours": 0.0048,
+    "confusion_at_0.5": {
+     "tn": 5681,
+     "fp": 8,
+     "fn": 278,
+     "tp": 603
+    }
+   }
+  }
+ },
+ "comparison": {
+  "6h": {
+   "best_baseline": "persistence_threshold",
+   "baseline_roc_auc": 0.9716,
+   "rf_roc_auc": 0.9921,
+   "roc_auc_gain_over_baseline": 0.0205,
+   "baseline_brier": 0.0075,
+   "rf_brier": 0.0227,
+   "brier_gain_over_baseline": -0.0152,
+   "baseline_f1": 0.9668,
+   "rf_f1": 0.8861
+  },
+  "12h": {
+   "best_baseline": "persistence_threshold",
+   "baseline_roc_auc": 0.9467,
+   "rf_roc_auc": 0.99,
+   "roc_auc_gain_over_baseline": 0.0433,
+   "baseline_brier": 0.0139,
+   "rf_brier": 0.03,
+   "brier_gain_over_baseline": -0.0161,
+   "baseline_f1": 0.94,
+   "rf_f1": 0.8525
+  },
+  "24h": {
+   "best_baseline": "persistence_threshold",
+   "baseline_roc_auc": 0.904,
+   "rf_roc_auc": 0.9825,
+   "roc_auc_gain_over_baseline": 0.0785,
+   "baseline_brier": 0.0266,
+   "rf_brier": 0.0418,
+   "brier_gain_over_baseline": -0.0152,
+   "baseline_f1": 0.8907,
+   "rf_f1": 0.8083
+  }
+ },
+ "note": "Baselines are deliberately simple rules on the current level and its recent change; they carry no rainfall or upstream-gauge information."
+}

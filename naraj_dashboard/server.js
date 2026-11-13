@@ -37,6 +37,15 @@ function modelInfo() {
   } catch (err) {
     meta = null;
   }
+  // Persistence-baseline comparison (ml/src/baseline_skill.py), if generated.
+  let baseline = null;
+  try {
+    baseline = JSON.parse(
+      fs.readFileSync(path.join(__dirname, "data", "ml_models", "hf_forecast_baseline.json"), "utf8")
+    );
+  } catch (err) {
+    baseline = null;
+  }
   modelInfoCache = {
     status: meta ? "trained" : "unavailable",
     trained_at: meta ? meta.trained_at : null,
@@ -57,6 +66,16 @@ function modelInfo() {
           "A frozen CWC gauge (constant level for days) has features nearly identical to safe hours, so the ML component can under-read plateaus at exactly the danger level; the statistical engine covers that case in the ensemble.",
         ]
       : ["Run ml_train.py (requires data/hf/forecast_dataset.csv from the Hugging Face dataset) to train the models."],
+    baseline_skill: baseline
+      ? {
+          generated_at: baseline.generated_at,
+          note: baseline.note,
+          split: baseline.split,
+          label: baseline.label,
+          baselines: baseline.baselines,
+          comparison: baseline.comparison,
+        }
+      : null,
     ml_bridge: mlBridge.status(),
   };
   return modelInfoCache;
@@ -346,6 +365,25 @@ async function handleRequest(req, res) {
         }
       }
     }
+
+    // How old is the observation this forecast is anchored to? The cache/series
+    // end in the past, so surface that instead of letting the card imply "now".
+    const obsTime = result.reference_time || (result.ml_result && result.ml_result.as_of) || null;
+    const STALE_AFTER_HOURS = 48;
+    let ageHours = null;
+    if (obsTime) {
+      const t = new Date(obsTime).getTime();
+      if (Number.isFinite(t)) ageHours = Math.round(((Date.now() - t) / 36e5) * 10) / 10;
+    }
+    result.observation_freshness = {
+      latest_observation: obsTime,
+      age_hours: ageHours,
+      age_days: ageHours === null ? null : Math.round((ageHours / 24) * 10) / 10,
+      threshold_hours: STALE_AFTER_HOURS,
+      stale: ageHours === null ? true : ageHours > STALE_AFTER_HOURS,
+      note:
+        "Forecast anchored to the latest observation available in the CWC series, not to the current time.",
+    };
 
     return sendJSON(res, 200, result);
   }

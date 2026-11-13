@@ -885,6 +885,42 @@ async function renderAimlModelPanel() {
   const notes = (info.notes || []).map((n) => `<li>${esc(n)}</li>`).join("");
   const bridge = info.ml_bridge || {};
 
+  // Persistence-baseline comparison (ml/src/baseline_skill.py)
+  const bs = info.baseline_skill;
+  let baselineBlock = "";
+  if (bs && bs.comparison) {
+    const cmpRows = Object.entries(bs.comparison)
+      .map(([key, c]) => {
+        const gain = Number(c.roc_auc_gain_over_baseline);
+        const gainText = Number.isFinite(gain) ? (gain >= 0 ? "+" : "") + gain.toFixed(3) : "—";
+        return `<tr>
+          <td><strong>${esc(key)}</strong></td>
+          <td>${fmtMetric(c.baseline_roc_auc, 3)} → ${fmtMetric(c.rf_roc_auc, 3)}<br><span class="muted">${gainText}</span></td>
+          <td>${fmtMetric(c.baseline_brier, 4)} → ${fmtMetric(c.rf_brier, 4)}</td>
+          <td>${fmtMetric(c.baseline_f1, 3)} → ${fmtMetric(c.rf_f1, 3)}</td>
+        </tr>`;
+      })
+      .join("");
+    baselineBlock = `
+      <p class="muted small" style="margin-top:12px;"><strong>Persistence baseline — same chronological holdout</strong></p>
+      <div class="aiml-metrics-wrap">
+        <table class="model-skill-table aiml-metrics">
+          <thead><tr>
+            <th>Horizon</th><th>AUC<br>base → RF</th><th>Brier<br>base → RF</th><th>F1<br>base → RF</th>
+          </tr></thead>
+          <tbody>${cmpRows}</tbody>
+        </table>
+      </div>
+      <p class="muted small">
+        The baseline is a rule, not a model: “flood if today's Naraj level is already at or above
+        ${esc(((bs.label || {}).threshold_m) ?? 24.28)} m”. It is scored on the same test rows as the RF.
+        <strong>The RF ranks better (higher AUC) at every horizon, but the rule scores lower Brier and
+        higher F1</strong> — most of the predictable signal is persistence, and the RF's calibration
+        spreads probability into the low-event region where a hard 0/1 rule is already correct.
+        Read the AUC column as ranking skill and the Brier/F1 columns as operating behaviour.
+      </p>`;
+  }
+
   host.innerHTML = `
     <ul class="muted small" style="margin:0 0 10px 18px;">${meta.map((m) => `<li>${m}</li>`).join("")}</ul>
     <div class="aiml-metrics-wrap">
@@ -900,6 +936,7 @@ async function renderAimlModelPanel() {
       Brier is the calibrated probability error (lower is better); ROC-AUC/PR-AUC measure ranking skill
       on a period the models never saw. Precision is high because the target is a rare event — read it
       together with recall, which is lower.</p>
+    ${baselineBlock}
     ${topFeatures ? `<p class="muted small"><strong>Strongest features</strong> (the model leans on recent Naraj water levels):</p><ul class="muted small" style="margin:0 0 8px 18px;">${topFeatures}</ul>` : ""}
     ${notes ? `<p class="muted small"><strong>Training notes</strong></p><ul class="muted small" style="margin:0 0 4px 18px;">${notes}</ul>` : ""}
     <p class="muted small">ML bridge: ${bridge.available ? `connected, dataset ends ${esc(bridge.dataset_end)}` : "not connected in this session"}.</p>`;

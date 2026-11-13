@@ -102,8 +102,28 @@ The same folder also holds the large spatial models
 (`random_forest_flood.pkl` 1.8 GB, `random_forest_flood_12features.pkl` 2.9 GB).
 A download of everything is several GB; use `--pattern` to narrow it.
 
-`requirements.txt` pins `scikit-learn>=1.3,<1.8` because `ml_train.py` uses
-`CalibratedClassifierCV(cv="prefit")`, which scikit-learn 1.8+ removed.
+`requirements.txt` pins `scikit-learn>=1.3,<1.8`. `ml_train.py` now calibrates with
+`FrozenEstimator` (scikit-learn ≥ 1.6) and only falls back to the removed
+`cv="prefit"` API on older versions, so it *runs* on 1.7 and 1.9. The upper bound
+stays because 1.9 does not reproduce the committed numbers (6h holdout ROC-AUC
+0.9955 vs 0.9921) and unpickling the 1.7.2-built bundles there raises
+`InconsistentVersionWarning`. Retrain on 1.7.x to match `hf_forecast_metadata.json`.
+
+Persistence-baseline check (optional, no training):
+
+```bash
+python ml/src/baseline_skill.py    # writes data/ml_models/hf_forecast_baseline.json
+```
+
+It scores a "flood if today's level is already above 24.28 m" rule on the same
+chronological holdout and exposes the comparison at `/api/model/info`
+(`baseline_skill`) and on the research page.
+
+Smoke tests (start their own server on a free port):
+
+```bash
+python tests/test_forecast_api.py -v
+```
 
 ### Scheduled CWC ingestion (keep the forecast anchor current)
 
