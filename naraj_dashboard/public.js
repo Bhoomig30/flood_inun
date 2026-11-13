@@ -560,6 +560,8 @@ function createAIResultsPanel() {
       Mean IoU per tile ${(aiFloodTestMetrics.per_tile.mean_iou * 100).toFixed(1)}% &middot;
       pooled IoU ${(aiFloodTestMetrics.pooled_pixels.iou * 100).toFixed(1)}%.
       The scores below are from a training scene, so they overstate real accuracy.
+      The held-out split is by tile, not by event: all test chips share flood events with the
+      training chips, so this number is likely optimistic as well.
     </div>` : ""}
 
     <div
@@ -1332,8 +1334,11 @@ async function initFloodMap() {
       layer:
         () => layerRegistry.ndem,
 
+      // The NDEM layer is built but NOT added to the map on load (neutral
+      // India-wide default), so the checkbox must start unchecked or it
+      // claims a visible layer that isn't there.
       checked:
-        true
+        false
     }
 
   ];
@@ -1380,6 +1385,9 @@ async function initFloodMap() {
               : d.layer;
 
           if (!layer) {
+            // No layer exists for this event (e.g. the checked layer has no
+            // digitized extent) — don't leave the box claiming it is shown.
+            cb.checked = false;
             return;
           }
 

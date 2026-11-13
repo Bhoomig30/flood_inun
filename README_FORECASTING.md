@@ -66,16 +66,168 @@ python3 scripts/build_india_registry.py --src ml/data/external
 # (downloads layout also supported; see --help)
 ```
 
+## Models
+
+The dashboard's forecast bundles live in `naraj_dashboard/data/ml_models/`:
+`hf_forecast_6h.pkl`, `hf_forecast_12h.pkl`, `hf_forecast_24h.pkl`, plus
+`hf_forecast_metadata.json`. They were built with **scikit-learn 1.7.x**, so keep
+the `>=1.3,<1.8` pin in `requirements.txt` — pickling/unpickling across a major
+minor boundary is not guaranteed, and `ml_train.py` uses an API that 1.8+ removed.
+Retrain with `python naraj_dashboard/ml_train.py` (reads the tracked
+`naraj_dashboard/data/hf/forecast_dataset.csv`).
+
+**Current state of this repo:** those three `.pkl` files **are tracked in git**
+(`git ls-files | grep pkl` lists them), so a fresh clone already has them. They were
+added with `git add -f` because `.gitignore` excludes `*.pkl` — meaning any bundle
+you regenerate is **ignored by git** and will not show up as a change unless you
+force-add it again.
+
+If the bundles are missing or need regenerating:
+
+```bash
+# 1) Train from the dataset that ships with the repo
+#    (naraj_dashboard/data/hf/forecast_dataset.csv, tracked, 43,800 rows)
+pip install -r requirements.txt
+python naraj_dashboard/ml_train.py      # writes the 3 bundles + metadata
+
+# 2) Or download the Hugging Face copies
+pip install huggingface_hub             # not in requirements.txt
+python ml/hf_data.py download --pattern "ml/data/models/*"
+```
+
+Downloading from Hugging Face fetches `ml/data/models/flood_forecast_{6,12,24}h.pkl`
+(and their imputers) — the older bundle path, *not* the `hf_forecast_*.pkl` files
+this dashboard loads, so you still need `ml_train.py` for a working dashboard.
+The same folder also holds the large spatial models
+(`random_forest_flood.pkl` 1.8 GB, `random_forest_flood_12features.pkl` 2.9 GB).
+A download of everything is several GB; use `--pattern` to narrow it.
+
+`requirements.txt` pins `scikit-learn>=1.3,<1.8`. `ml_train.py` now calibrates with
+`FrozenEstimator` (scikit-learn ≥ 1.6) and only falls back to the removed
+`cv="prefit"` API on older versions, so it *runs* on 1.7 and 1.9. The upper bound
+stays because 1.9 does not reproduce the committed numbers (6h holdout ROC-AUC
+0.9955 vs 0.9921) and unpickling the 1.7.2-built bundles there raises
+`InconsistentVersionWarning`. Retrain on 1.7.x to match `hf_forecast_metadata.json`.
+
+Persistence-baseline check (optional, no training):
+
+```bash
+python ml/src/baseline_skill.py    # writes data/ml_models/hf_forecast_baseline.json
+```
+
+It scores a "flood if today's level is already above 24.28 m" rule on the same
+chronological holdout and exposes the comparison at `/api/model/info`
+(`baseline_skill`) and on the research page.
+
+Smoke tests (start their own server on a free port):
+
+```bash
+python tests/test_forecast_api.py -v
+```
+
+### Scheduled CWC ingestion (keep the forecast anchor current)
+
+`scripts/ingest_cwc.py` pulls the newest CWC observations, appends the new
+records to `data/cwc/<station>_daily_2021_2025.json` (history is never
+rewritten), rebuilds the 71-feature frame and appends only rows newer than the
+served dataset, then writes `data/cwc/ingestion_status.json` (a gitignored run
+snapshot — see `data/cwc/ingestion_status.example.json`; without it `/api/health`
+reports `status: "not_run"` rather than guessing). The ML service reloads the
+frame on change, so no restart is needed.
+
+```bash
+python3 scripts/ingest_cwc.py --once --dry-run          # parse + report, change nothing
+python3 scripts/ingest_cwc.py --once --levels-csv <path-or-url>
+python3 scripts/ingest_cwc.py --watch --interval-minutes 360
+npm run ingest:cwc                                      # same as --once
+```
+
+Cron example (every 6 hours):
+
+```cron
+0 */6 * * * cd /path/to/flood_inun && .venv/bin/python scripts/ingest_cwc.py --once >> artifacts/ingest.log 2>&1
+```
+
+Sources and limits:
+
+| Input | Where it comes from |
+| --- | --- |
+| Hourly rainfall | `--rain-csv` (default: Odisha 2021-2025 export from the Hugging Face dataset, cached 6 h) |
+| Hourly water levels | `--levels-csv` only — the CWC manual hourly water-level export is **not** in the Hugging Face dataset |
+
+If no newer water-level export is supplied, the run completes, refreshes
+rainfall, and reports `stale: true` with the blocker instead of reusing an old
+anchor silently. `GET /api/health` exposes the same report under
+`data_freshness` (`latest_observation`, `age_days`, `stale`, `blockers`).
+
 ## API
 
 | Endpoint | Purpose |
 | --- | --- |
 | `GET /api/location?latitude=..&longitude=..` | Nearest real CWC rainfall + river stations with `distance_km`, latest observations, `no_nearby_station` status when nothing is within radius (300 km rainfall / 400 km river), plus `model_scope` |
-| `GET /api/stations/india_cwc?q=&type=rainfall\|river&state=&latitude=&longitude=&limit=` | India-wide registry with filters + distance sort |
-| `GET /api/forecast?station=naraj\|alipingal\|nimapara` | 6/12/24h ensemble (statistical engine + RF for Naraj), honest scope labels |
+| `GET /api/stations/india_cwc?q=&type=rainfall\|river&state=&latitude=&longitude=&limit=` | India-wide registry with filters + distance sort, each row carrying `forecast_tier`, `has_ml_model`, `has_verified_series`, `forecast_station_key` |
+| `GET /api/forecast?station=..&state=..` | 6/12/24h forecast; headline = RF for Naraj, legacy engine for Alipingal/Nimapara; any other registry station returns an explicit `station_not_supported` refusal with no numbers |
 | `GET /api/model/info` | Training metadata, HF/GitHub provenance, holdout skill |
 | `GET /api/stations/india?q=&basin=&state=` | Curated river-gauge registry (basin explorer) |
 | `GET /api/levels/recent?station=`, `/api/forecast/backtest`, `/api/health` | Chart series, causal evaluation, health |
+
+### Capability tiers (measured, 2026-11-13)
+
+Not every station in the 842-station registry has a model, and the dashboard
+says which tier each one is in instead of implying uniform coverage:
+
+| Tier | Stations (measured) | What the dashboard shows |
+| --- | --- | --- |
+| 1 — ML forecast | **1** (Naraj) | Random Forest headline probability for 6/12/24 h + persistence replay |
+| 2 — Observations + legacy engine | **2** (Alipingal, Nimapara) | legacy statistical engine probabilities, clearly labelled `headline_source: legacy_engine` |
+| 3 — Station metadata only | **839** | registry metadata, coordinates, river/basin/district and any real rainfall or discharge observation — **no probabilities at all** |
+
+Tiering is enforced server-side, not just hidden in the UI: `/api/forecast`,
+`/api/forecast/export` and `/api/levels/recent` resolve the requested station
+name against the registry and refuse (`station_not_supported` / `unknown_station`)
+anything outside the verified set, so another station's numbers can never be
+returned by accident. `/api/stations/india_cwc` exposes the tier for every row,
+which is what the map colours and the station picker use.
+
+The national view shows all 842 stations as markers (clustered by zoom), with
+search across station/river/district/state and a state filter. Selecting any
+station recentres every map and drives the location panels; the forecast card
+then renders either the station's real tier output or the explicit refusal with
+its metadata.
+
+What is **not** available today: trained models or verified hourly water-level
+series for any station outside those three. No per-station probability is
+estimated, interpolated or borrowed for tier-3 stations.
+
+### Headline, legacy engine and anchors
+
+The reported probability is **not a blend**. For Naraj it is the Random Forest
+alone, anchored to the last row of `data/hf/forecast_dataset.csv`
+(2025-12-30 23:00), and `headline_source` is `rf_model`. The statistical engine
+is still computed and returned under `legacy_engine` — labelled *legacy engine,
+observation basis 2022-08-31* — with its own per-horizon probabilities, risk
+bands and observed level. It is never added to the headline.
+
+`forecast_anchors` still describes both moments: `ml_as_of`,
+`statistical_engine_reference_time` (which cannot move past
+`calibration.hourly_end` without hourly history), `anchors_aligned: false`, and
+`ensemble_mixes_anchors: false` (the headline is single-source).
+`observation_freshness.latest_observation` is the RF's row and its age is
+reported against a 48 h threshold.
+
+Stations the RF does not serve (Alipingal, Nimapara) keep the engine as the
+headline and report `headline_source: "legacy_engine"`, so the card never
+presents an engine value as model output for a station without a model.
+
+`persistence` carries the check shown beside the ML probability: the latest
+`naraj_water_level_m` from the dataset's final row against the flood threshold
+recorded in `hf_forecast_baseline.json` (`label.threshold_m`). Both numbers are
+read from those files; nothing is hard-coded.
+
+**Follow-up that would allow re-blending:** extend the engine's hourly water
+level history past Aug-2022 (`data/cwc/*_august2022_hourly.json`). Until then the
+engine's anchor is three years older than the RF's and the two must stay
+separate. An explicit `?reference_time=` still pins both, for back-testing.
 
 ## Key files
 
@@ -95,8 +247,9 @@ python3 scripts/build_india_registry.py --src ml/data/external
 - Station markers from the previous location removed before each new render
 - Flood Map: study-region layers built but OFF by default; AI-scene button and
   layer toggles re-enable them; stale event layers cleared on event change
-- Forecast card: real RF ensemble output, honest "Historical-data AI forecast …
-  not a live government flood warning" status, scope message per location
+- Forecast card: RF headline with a historical-replay banner, separate legacy
+  engine block, persistence check, present-condition status and scope message
+  per location
 - India Stations pane: 842/842 real stations, type/state filters, distance sort
 - Research view: 6 tabs, 18 map layers, 4-step evolution timeline, station
   charts, validation metrics, confidence grid — zero page errors

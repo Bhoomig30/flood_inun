@@ -1,0 +1,45 @@
+{
+ "_note": "Example of data/cwc/ingestion_status.json (gitignored). Copy to ingestion_status.json only if you want /api/health to show a run; scripts/ingest_cwc.py writes it with real values.",
+ "last_run_utc": "<example: ISO-8601 UTC timestamp of the last ingestion run>",
+ "source": {
+  "rainfall": "<example: https URL or local path of the rainfall export>",
+  "rainfall_staged_to": "<example: ml/data/external/rainfall/CWC_Rainfall_India_2021_2025/state_wise/<state>_2021_2025.csv>",
+  "water_levels": null
+ },
+ "rainfall_rows": null,
+ "stations": {
+  "naraj": {
+   "file": "naraj_daily_2021_2025.json",
+   "records_before": 1801,
+   "added": 0,
+   "latest_observation": null,
+   "status": "example: no_observations_in_source"
+  },
+  "alipingal": {
+   "file": "alipingal_daily_2021_2025.json",
+   "records_before": 1801,
+   "added": 0,
+   "latest_observation": null,
+   "status": "example: no_observations_in_source"
+  },
+  "nimapara": {
+   "file": "nimapara_daily_2021_2025.json",
+   "records_before": 1801,
+   "added": 0,
+   "latest_observation": null,
+   "status": "example: no_observations_in_source"
+  }
+ },
+ "observations_added": 0,
+ "latest_observation": null,
+ "age_days": null,
+ "stale": null,
+ "stale_after_days": 2.0,
+ "dataset": {
+  "rebuilt": false,
+  "skipped": "example: no new observations (anchor unchanged)"
+ },
+ "blockers": [
+  "example: no water-level source supplied (--levels-csv); the CWC manual hourly water-level export is not in the Hugging Face dataset"
+ ]
+}

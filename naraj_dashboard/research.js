@@ -671,7 +671,8 @@ async function renderAnalysisPanels() {
         <div class="detail-row"><span class="detail-label">Pooled recall</span><span class="detail-value">${fmtPct(pp.recall)}</span></div>
         <div class="detail-row"><span class="detail-label">Pooled F1</span><span class="detail-value">${fmtPct(pp.f1)}</span></div>
         <div class="detail-row"><span class="detail-label">Tiles with IoU &lt; 50%</span><span class="detail-value">${esc(String(t.tiles_iou_below_0_5))}</span></div>
-        <p class="chart-caption">Random Forest (12 features), evaluated on the held-out TEST split only; the threshold (${esc(String(t.threshold))}) was tuned on the validation split. Per-tile IoU counts every tile equally, so tiles with almost no flooding lower it; pooled IoU is dominated by large flooded tiles. The earlier 87% IoU was measured on a training scene and is not shown as accuracy. The SAR-vs-NDEM agreement above evaluates the rule-based candidate mask, a different measurement.</p>`;
+        <p class="chart-caption">Random Forest (12 features), evaluated on the held-out TEST split only; the threshold (${esc(String(t.threshold))}) was tuned on the validation split. Per-tile IoU counts every tile equally, so tiles with almost no flooding lower it; pooled IoU is dominated by large flooded tiles. The earlier 87% IoU was measured on a training scene and is not shown as accuracy. The SAR-vs-NDEM agreement above evaluates the rule-based candidate mask, a different measurement.</p>
+        <p class="chart-caption"><strong>Split caveat — likely optimistic:</strong> the test split is by tile, not by flood event or location. All ${esc(String(t.test_tiles_scored))} scored test chips belong to the same 11 Sentinel-1 events as the training chips, 36 are within 10 km of a training chip and 66 within 50 km. Same-event, neighbouring-chip evaluation flatters a model through shared acquisition conditions and spatial autocorrelation, so treat these IoUs as an upper bound until an event-held-out split exists (see <code>docs/NEXT_STEPS.md</code>).</p>`;
     }
   } catch (e) {
     console.error("Validation panel failed:", e);
@@ -817,6 +818,131 @@ async function initTerrain() {
 }
 
 // ---------------------------------------------------------------------------
+// Trained-model panel (reads the same metadata the API serves)
+// ---------------------------------------------------------------------------
+
+function fmtMetric(value, digits) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n.toFixed(digits) : "—";
+}
+
+async function renderAimlModelPanel() {
+  const host = document.getElementById("aiml-model-content");
+  if (!host) return;
+
+  let info = null;
+  try {
+    info = await loadJSON("/api/model/info");
+  } catch (e) {
+    info = null;
+  }
+
+  if (!info || info.status !== "trained") {
+    host.innerHTML = `<p class="muted">Trained bundles are not available in this deployment. Train them with
+      <code>python3 naraj_dashboard/ml_train.py</code> using the real dataset, then reload.</p>`;
+    return;
+  }
+
+  const ds = info.dataset || {};
+  const meta = [
+    `<strong>Model:</strong> ${esc(info.model_type || "RandomForestClassifier + calibration")} (v${esc(info.version)})`,
+    `<strong>Trained:</strong> ${esc((info.trained_at || "").slice(0, 10))}`,
+    `<strong>Dataset:</strong> ${esc(ds.rows == null ? "—" : Number(ds.rows).toLocaleString())} hourly rows, ${esc(ds.features)} features, ${esc(ds.start)} → ${esc(ds.end)}`,
+    `<strong>Label:</strong> ${esc(info.label_rule || "")}`,
+    `<strong>Split:</strong> ${esc((info.splits || {}).method || "chronological")} 70/15/15 — metrics below are the untouched holdout`,
+  ];
+
+  const horizons = info.horizons || {};
+  const keys = Object.keys(horizons);
+  let rows = "";
+  let testRows = null;
+  let valRows = null;
+  for (const key of keys) {
+    const h = horizons[key] || {};
+    const test = h.test || {};
+    if (test.rows != null) testRows = Number(test.rows).toLocaleString();
+    if ((h.validation || {}).rows != null) valRows = Number((h.validation || {}).rows).toLocaleString();
+    rows += `<tr>
+      <td><strong>${esc(key)}</strong></td>
+      <td>${fmtMetric(test.brier, 4)}</td>
+      <td>${fmtMetric(test.roc_auc, 3)}</td>
+      <td>${fmtMetric(test.pr_auc, 3)}</td>
+      <td>${fmtMetric(test.precision, 3)}</td>
+      <td>${fmtMetric(test.recall, 3)}</td>
+      <td>${fmtMetric(test.f1, 3)}</td>
+    </tr>`;
+  }
+
+  const featureSets = keys.map((key) =>
+    ((horizons[key] || {}).top_features || []).slice(0, 3).map((f) => f.feature).join(", ")
+  );
+  const sameFeatures = featureSets.length > 1 && featureSets.every((f) => f && f === featureSets[0]);
+  const topFeatures = sameFeatures
+    ? `<ul class="muted small" style="margin:0 0 8px 18px;"><li><strong>All horizons:</strong> ${esc(featureSets[0])}</li></ul>`
+    : `<ul class="muted small" style="margin:0 0 8px 18px;">${keys
+        .map((key, i) => (featureSets[i] ? `<li><strong>${esc(key)}</strong>: ${esc(featureSets[i])}</li>` : ""))
+        .join("")}</ul>`;
+
+  const notes = (info.notes || []).map((n) => `<li>${esc(n)}</li>`).join("");
+  const bridge = info.ml_bridge || {};
+
+  // Persistence-baseline comparison (ml/src/baseline_skill.py)
+  const bs = info.baseline_skill;
+  let baselineBlock = "";
+  if (bs && bs.comparison) {
+    const cmpRows = Object.entries(bs.comparison)
+      .map(([key, c]) => {
+        const gain = Number(c.roc_auc_gain_over_baseline);
+        const gainText = Number.isFinite(gain) ? (gain >= 0 ? "+" : "") + gain.toFixed(3) : "—";
+        return `<tr>
+          <td><strong>${esc(key)}</strong></td>
+          <td>${fmtMetric(c.baseline_roc_auc, 3)} → ${fmtMetric(c.rf_roc_auc, 3)}<br><span class="muted">${gainText}</span></td>
+          <td>${fmtMetric(c.baseline_brier, 4)} → ${fmtMetric(c.rf_brier, 4)}</td>
+          <td>${fmtMetric(c.baseline_f1, 3)} → ${fmtMetric(c.rf_f1, 3)}</td>
+        </tr>`;
+      })
+      .join("");
+    baselineBlock = `
+      <p class="muted small" style="margin-top:12px;"><strong>Persistence baseline — same chronological holdout</strong></p>
+      <div class="aiml-metrics-wrap">
+        <table class="model-skill-table aiml-metrics">
+          <thead><tr>
+            <th>Horizon</th><th>AUC<br>base → RF</th><th>Brier<br>base → RF</th><th>F1<br>base → RF</th>
+          </tr></thead>
+          <tbody>${cmpRows}</tbody>
+        </table>
+      </div>
+      <p class="muted small">
+        The baseline is a rule, not a model: “flood if today's Naraj level is already at or above
+        ${esc(((bs.label || {}).threshold_m) ?? 24.28)} m”. It is scored on the same test rows as the RF.
+        <strong>The RF ranks better (higher AUC) at every horizon, but the rule scores lower Brier and
+        higher F1</strong> — most of the predictable signal is persistence, and the RF's calibration
+        spreads probability into the low-event region where a hard 0/1 rule is already correct.
+        Read the AUC column as ranking skill and the Brier/F1 columns as operating behaviour.
+      </p>`;
+  }
+
+  host.innerHTML = `
+    <ul class="muted small" style="margin:0 0 10px 18px;">${meta.map((m) => `<li>${m}</li>`).join("")}</ul>
+    <div class="aiml-metrics-wrap">
+      <table class="model-skill-table aiml-metrics">
+        <thead><tr>
+          <th>Horizon</th><th>Brier</th><th>ROC-AUC</th><th>PR-AUC</th>
+          <th>Precision</th><th>Recall</th><th>F1</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <p class="muted small">Holdout scores${testRows ? ` on ${testRows} test rows` : ""}${valRows ? ` (${valRows} validation rows used for calibration)` : ""}.
+      Brier is the calibrated probability error (lower is better); ROC-AUC/PR-AUC measure ranking skill
+      on a period the models never saw. Precision is high because the target is a rare event — read it
+      together with recall, which is lower.</p>
+    ${baselineBlock}
+    ${topFeatures ? `<p class="muted small"><strong>Strongest features</strong> (the model leans on recent Naraj water levels):</p><ul class="muted small" style="margin:0 0 8px 18px;">${topFeatures}</ul>` : ""}
+    ${notes ? `<p class="muted small"><strong>Training notes</strong></p><ul class="muted small" style="margin:0 0 4px 18px;">${notes}</ul>` : ""}
+    <p class="muted small">ML bridge: ${bridge.available ? `connected, dataset ends ${esc(bridge.dataset_end)}` : "not connected in this session"}.</p>`;
+}
+
 // Model panel (temporal forecast scope — honest labeling)
 // ---------------------------------------------------------------------------
 
@@ -887,6 +1013,7 @@ async function bootResearch() {
   await step("panels", renderAnalysisPanels);
   await step("terrain", initTerrain);
   await step("model-scope", renderModelScopePanel);
+  await step("aiml-model", renderAimlModelPanel);
 
   if (failures.length) {
     console.warn("Research view loaded with degraded sections:", failures.join(" | "));

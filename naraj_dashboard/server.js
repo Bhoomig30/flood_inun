@@ -37,6 +37,15 @@ function modelInfo() {
   } catch (err) {
     meta = null;
   }
+  // Persistence-baseline comparison (ml/src/baseline_skill.py), if generated.
+  let baseline = null;
+  try {
+    baseline = JSON.parse(
+      fs.readFileSync(path.join(__dirname, "data", "ml_models", "hf_forecast_baseline.json"), "utf8")
+    );
+  } catch (err) {
+    baseline = null;
+  }
   modelInfoCache = {
     status: meta ? "trained" : "unavailable",
     trained_at: meta ? meta.trained_at : null,
@@ -57,6 +66,16 @@ function modelInfo() {
           "A frozen CWC gauge (constant level for days) has features nearly identical to safe hours, so the ML component can under-read plateaus at exactly the danger level; the statistical engine covers that case in the ensemble.",
         ]
       : ["Run ml_train.py (requires data/hf/forecast_dataset.csv from the Hugging Face dataset) to train the models."],
+    baseline_skill: baseline
+      ? {
+          generated_at: baseline.generated_at,
+          note: baseline.note,
+          split: baseline.split,
+          label: baseline.label,
+          baselines: baseline.baselines,
+          comparison: baseline.comparison,
+        }
+      : null,
     ml_bridge: mlBridge.status(),
   };
   return modelInfoCache;
@@ -92,6 +111,201 @@ const MIME = {
   ".woff": "font/woff",
   ".woff2": "font/woff2",
 };
+
+// Comparable key for a timestamp regardless of whether it is ISO ("2022-08-31
+// T00:00:00.000Z") or pandas-style ("2025-12-30 23:00:00"). Hour resolution is
+// enough to decide whether two forecast components share an anchor.
+function anchorKey(value) {
+  if (!value) return null;
+  const m = String(value).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
+  if (!m) return null;
+  return `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}`;
+}
+
+// Same value, rendered for humans/labels ("2022-08-31 00:00").
+function anchorLabel(value) {
+  const key = anchorKey(value);
+  return key ? key.replace("T", " ") : null;
+}
+
+// Latest row of the served dataset, used for the persistence indicator. Reads
+// only the header and the tail of the CSV instead of loading the ~24 MB file.
+let lastDatasetRowCache = null;
+function datasetLastRow() {
+  if (lastDatasetRowCache) return lastDatasetRowCache;
+  const file = path.join(__dirname, "data", "hf", "forecast_dataset.csv");
+  let fd = null;
+  try {
+    const size = fs.statSync(file).size;
+    fd = fs.openSync(file, "r");
+    const headBuf = Buffer.alloc(Math.min(8192, size));
+    fs.readSync(fd, headBuf, 0, headBuf.length, 0);
+    const header = headBuf.toString("utf8").split("\n")[0].replace(/\r$/, "").split(",");
+    const tailLen = Math.min(65536, size);
+    const tailBuf = Buffer.alloc(tailLen);
+    fs.readSync(fd, tailBuf, 0, tailLen, size - tailLen);
+    const lines = tailBuf.toString("utf8").split("\n").filter((l) => l.trim().length > 0);
+    const values = lines[lines.length - 1].replace(/\r$/, "").split(",");
+    const levelIdx = header.indexOf("naraj_water_level_m");
+    if (levelIdx < 0) throw new Error("naraj_water_level_m column not found");
+    lastDatasetRowCache = {
+      timestamp: values[0],
+      naraj_water_level_m: Number(values[levelIdx]),
+    };
+    return lastDatasetRowCache;
+  } catch (err) {
+    return null;
+  } finally {
+    if (fd !== null) {
+      try {
+        fs.closeSync(fd);
+      } catch (e) {
+        /* ignore */
+      }
+    }
+  }
+}
+
+// Persistence check shown next to the ML probability: current Naraj level from
+// the dataset's last row against the flood threshold the baseline used
+// (hf_forecast_baseline.json -> label.threshold_m). Both are read from files.
+function persistenceIndicator() {
+  const info = modelInfo();
+  const chain = info.baseline_skill && info.baseline_skill.label;
+  const threshold = chain ? Number(chain.threshold_m) : NaN;
+  const row = datasetLastRow();
+  if (!row || !Number.isFinite(row.naraj_water_level_m) || !Number.isFinite(threshold)) {
+    return { available: false, reason: "dataset row or baseline threshold unavailable" };
+  }
+  const level = row.naraj_water_level_m;
+  return {
+    available: true,
+    station: "Naraj",
+    level_m: level,
+    level_as_of: row.timestamp,
+    threshold_m: threshold,
+    above_threshold: level >= threshold,
+    margin_m: Math.round((level - threshold) * 100) / 100,
+    level_source: "data/hf/forecast_dataset.csv (last row, naraj_water_level_m)",
+    threshold_source: "data/ml_models/hf_forecast_baseline.json (label.threshold_m)",
+  };
+}
+
+// ---------------------------------------------------------------------------
+// FORECAST CAPABILITY TIERS
+//   1 = trained RF headline (Naraj only)
+//   2 = verified water-level series served by the legacy engine
+//       (Naraj, Alipingal, Nimapara)
+//   3 = registry metadata and rainfall observations only — NO probabilities
+// Nothing outside the verified set may produce a forecast value.
+// ---------------------------------------------------------------------------
+const ML_MODEL_STATIONS = new Set(["naraj"]);
+const VERIFIED_SERIES_STATIONS = new Set(["naraj", "alipingal", "nimapara"]);
+
+function tierForStationKey(stationKey) {
+  const key = String(stationKey || "").trim().toLowerCase();
+  if (ML_MODEL_STATIONS.has(key)) return 1;
+  if (VERIFIED_SERIES_STATIONS.has(key)) return 2;
+  return 3;
+}
+
+function tierLabel(tier) {
+  if (tier === 1) return "ML forecast";
+  if (tier === 2) return "Observations + legacy engine";
+  return "Station metadata only";
+}
+
+// Registry stations that correspond to a verified water-level series.
+function verifiedKeyForName(name) {
+  const n = String(name || "").trim().toLowerCase();
+  return VERIFIED_SERIES_STATIONS.has(n) ? n : null;
+}
+
+function findRegistryStation(name, state) {
+  if (!name) return null;
+  let reg = { stations: [] };
+  try {
+    reg = locationService.loadRegistry();
+  } catch (err) {
+    return null;
+  }
+  const target = String(name).trim().toLowerCase();
+  const matches = (reg.stations || []).filter(
+    (s) => String(s.station || "").trim().toLowerCase() === target
+  );
+  if (!matches.length) return null;
+  if (state) {
+    const sameState = matches.filter(
+      (s) => String(s.state || "").toLowerCase() === String(state).toLowerCase()
+    );
+    if (sameState.length) return sameState[0];
+  }
+  return matches[0];
+}
+
+function stationSummary(s) {
+  if (!s) return null;
+  return {
+    name: s.station,
+    state: s.state || null,
+    district: s.district || null,
+    river: s.river || null,
+    kind: s.kind || null,
+    latitude: s.latitude,
+    longitude: s.longitude,
+    n_obs: s.n_obs,
+    latest_observation: s.latest_observation || null,
+  };
+}
+
+// Resolve a `station` query param to a verified forecast key, or return a
+// refusal payload so callers never receive another station's numbers.
+function resolveForecastStation(stationParam, stateParam) {
+  if (!stationParam) {
+    return { key: "naraj", tier: 1, registry: findRegistryStation("Naraj", "Odisha") };
+  }
+  const direct = String(stationParam).trim().toLowerCase();
+  if (VERIFIED_SERIES_STATIONS.has(direct)) {
+    return { key: direct, tier: tierForStationKey(direct), registry: null };
+  }
+  const reg = findRegistryStation(stationParam, stateParam);
+  if (reg) {
+    const key = verifiedKeyForName(reg.station);
+    if (key) return { key, tier: tierForStationKey(key), registry: reg };
+    return { key: null, tier: 3, registry: reg };
+  }
+  return { key: null, tier: null, registry: null };
+}
+
+function unsupportedStationPayload(resolved) {
+  if (!resolved.registry) {
+    return {
+      status: "unknown_station",
+      forecast: null,
+      forecast_tier: null,
+      reason:
+        "Station is not in the CWC registry used by this project, so no " +
+        "observation or forecast can be shown.",
+    };
+  }
+  return {
+    status: "station_not_supported",
+    forecast: null,
+    forecast_tier: 3,
+    forecast_tier_label: tierLabel(3),
+    station: stationSummary(resolved.registry),
+    ml_enabled: false,
+    reason:
+      "No verified hourly water-level series or trained forecast model " +
+      "exists for this station in this project.",
+    scope_note:
+      "Forecasts are served for Naraj (trained Random Forest) and " +
+      "Alipingal/Nimapara (verified series, legacy engine only).",
+    warning:
+      "This project does not invent probabilities for stations it was not " +
+      "trained or verified on.",
+  };
+}
 
 function sendJSON(res, status, data) {
   const body = JSON.stringify(data);
@@ -173,12 +387,15 @@ async function handleRequest(req, res) {
     try {
       const reg = locationService.loadRegistry();
       if (reg && Array.isArray(reg.stations) && reg.stations.length) {
-        const counts = (reg.meta && reg.meta.counts) || {};
+        const counts = reg.counts || (reg.meta && reg.meta.counts) || {};
         registryStatus = {
           loaded: true,
           stations: counts.total || reg.stations.length,
-          states: counts.states || 0,
-          generated_at: (reg.meta && reg.meta.generated_at) || null,
+          states:
+            counts.states ||
+            (Array.isArray(reg.states) ? reg.states.length : 0),
+          generated_at:
+            reg.generated_at || (reg.meta && reg.meta.generated_at) || null,
         };
       }
     } catch (err) { /* registry optional — reported as not loaded */ }
@@ -195,6 +412,42 @@ async function handleRequest(req, res) {
     try {
       datasetStatus.data_notice = locationLookup(20.5, 85.95).data_notice;
     } catch (err) { /* non-fatal */ }
+    // Ingestion health: never present an old anchor as current observations.
+    // The status file is a gitignored run snapshot, so a fresh clone has none.
+    // In that case report "no ingestion run yet" and leave freshness unknown
+    // instead of inventing a stale/current verdict.
+    let dataFreshness = { status: "not_run" };
+    let ingest = null;
+    try {
+      ingest = JSON.parse(
+        fs.readFileSync(path.join(__dirname, "data", "cwc", "ingestion_status.json"), "utf8")
+      );
+    } catch (err) {
+      ingest = null;
+    }
+    if (ingest) {
+      dataFreshness = {
+        status: ingest.status === "example" ? "example" : "reported",
+        latest_observation: ingest.latest_observation || null,
+        age_days: ingest.age_days === undefined ? null : ingest.age_days,
+        stale: typeof ingest.stale === "boolean" ? ingest.stale : null,
+        stale_after_days: ingest.stale_after_days,
+        last_ingestion_utc: ingest.last_run_utc || null,
+        water_levels_source: ingest.source ? ingest.source.water_levels : null,
+        blockers: Array.isArray(ingest.blockers) ? ingest.blockers : [],
+      };
+    } else {
+      dataFreshness = {
+        status: "not_run",
+        message: "no ingestion run yet",
+        latest_observation: null,
+        age_days: null,
+        stale: null,
+        hint:
+          "run python3 scripts/ingest_cwc.py --once to refresh CWC observations; " +
+          "see data/cwc/ingestion_status.example.json for the report shape",
+      };
+    }
     return sendJSON(res, 200, {
       status: "online",
       service: "FloodWatch Flood Intelligence API",
@@ -204,6 +457,7 @@ async function handleRequest(req, res) {
       forecast_engine: predictor.loaded ? "ready" : "not_loaded",
       forecast_status: predictor.loaded ? "ready" : "not_loaded",
       ml_model: modelInfoStatus,
+      data_freshness: dataFreshness,
       station_registry: registryStatus,
       datasets: {
         india_cwc_registry: registryStatus.loaded ? "available" : "unavailable",
@@ -270,51 +524,72 @@ async function handleRequest(req, res) {
       }
     }
 
-    const result = predictor.predict(referenceTime, stationKey);
+    // TIER GATE: only stations with a verified series may return numbers.
+    // The engine's stationByKey() defaults unknown keys to Naraj, so this
+    // check must happen before predict() — otherwise any registry station
+    // would silently receive Naraj's forecast.
+    const resolved = resolveForecastStation(stationKey, parsed.searchParams.get("state"));
+    if (!resolved.key) {
+      return sendJSON(res, 200, unsupportedStationPayload(resolved));
+    }
+    const forecastKey = resolved.key;
+    const result = predictor.predict(referenceTime, forecastKey);
 
-    // Attach ML ensemble output when the bridge is available.
-    // The pooled Random Forests are SERVED through the Naraj feature
-    // pipeline (ml_serve.py TARGET), so the ML component is only blended
-    // for Naraj — other stations get the statistical engine, honestly
-    // labelled, rather than a misattributed ML probability.
-    const mlCapableStation = !stationKey || stationByKey(stationKey).key === "naraj";
+    // HEADLINE = Random Forest only. The old 60/40 blend mixed an engine
+    // anchored to Aug-2022 with an RF anchored to the dataset's last row, so
+    // the number did not describe either moment. The engine's own result is
+    // preserved verbatim under `legacy_engine` (see below) and never enters
+    // the headline. The pooled RFs are SERVED through the Naraj feature
+    // pipeline, so only Naraj can have an RF headline; other stations keep
+    // the engine headline, explicitly labelled `headline_source`.
+    result.forecast_tier = resolved.tier;
+    result.forecast_tier_label = tierLabel(resolved.tier);
+    if (resolved.registry) result.registry_station = stationSummary(resolved.registry);
+    const mlCapableStation = forecastKey === "naraj";
     if (result.status === "success") {
+      // Snapshot the engine result BEFORE it is replaced, so the legacy path
+      // stays available and clearly separable in the response.
+      const legacyLabelBasis = anchorLabel(result.reference_time) || "unknown";
+      const legacyEngine = {
+        label: "legacy engine, observation basis " + legacyLabelBasis,
+        reference_time: result.reference_time,
+        overall_risk: result.overall_risk,
+        forecast: JSON.parse(JSON.stringify(result.forecast)),
+        observed: JSON.parse(JSON.stringify(result.observed || {})),
+        calibration_reference: result.calibration || null,
+        note:
+          "Rule-based rise/level/seasonal engine anchored to its Aug-2022 " +
+          "hourly CWC series. Reported for comparison only; it is not part " +
+          "of the headline probability.",
+      };
+
       result.ml = mlBridge.status();
       result.ml_capable = mlCapableStation;
+      result.headline_source = "legacy_engine";
       if (mlBridge.status().available && mlCapableStation) {
-        // Align the ML component to the SAME as-of moment as the statistical
-        // engine (result.reference_time) so the ensemble never mixes moments —
-        // e.g. live mode serves the engine's latest verified observation
-        // (2022-08-31), and the ML row for that exact hour is used, not a
-        // later row from the 2021-2025 dataset.
-        const mlRef = referenceTime || result.reference_time || null;
+        // The ML model is anchored to the newest observation in the system,
+        // which is the served dataset's last row (hf/forecast_dataset.csv,
+        // ends 2025-12-30). An explicit ?reference_time= (back-testing) still
+        // wins; null means "latest row".
+        const mlRef =
+          referenceTime || mlBridge.status().dataset_end || null;
         const ml = await mlBridge.predict(mlRef);
         if (ml.ok && ml.horizons) {
           result.ml_enabled = true;
           result.ml_result = { as_of: ml.as_of, horizons: ml.horizons };
+          result.headline_source = "rf_model";
           for (const h of ["6h", "12h", "24h"]) {
             const mlP01 =
               ml.horizons[h] && Number.isFinite(ml.horizons[h].probability)
                 ? ml.horizons[h].probability
                 : null;
             if (mlP01 !== null && result.forecast[h]) {
-              // Ensemble: 60% statistical engine (level/percentile physics,
-              // recession-aware) + 40% calibrated Random Forest trained on
-              // the real 2021-2025 CWC dataset (22 flood events, 5 monsoons).
-              // The v3 RF has a measured 0.3-0.5% mean false-alarm rate on
-              // safe holdout hours, so no recession discount is needed.
               const mlP = Math.round(mlP01 * 10000) / 100; // -> percent, 2dp
-              const mlWeight = 0.4;
-              const blended =
-                (1 - mlWeight) * result.forecast[h].flood_probability_percent +
-                mlWeight * mlP;
+              // Headline probability and band are the RF alone. The engine's
+              // numbers stay in legacy_engine.forecast[h].
               result.forecast[h].ml_probability_percent = mlP;
-              result.forecast[h].ml_weight = mlWeight;
-              result.forecast[h].flood_probability_percent =
-                Math.round(blended * 100) / 100;
-              result.forecast[h].risk = predictor.riskBand(
-                result.forecast[h].flood_probability_percent
-              );
+              result.forecast[h].flood_probability_percent = mlP;
+              result.forecast[h].risk = predictor.riskBand(mlP);
             }
           }
           const probs = ["6h", "12h", "24h"].map(
@@ -323,7 +598,65 @@ async function handleRequest(req, res) {
           result.overall_risk = predictor.riskBand(Math.max(...probs));
         }
       }
+      result.legacy_engine = legacyEngine;
+      result.persistence = persistenceIndicator();
     }
+
+    // ANCHORS: the headline (RF) and the legacy engine resolve "latest
+    // observation" from different sources — the engine from its Aug-2022
+    // hourly calibration file, the RF from the served dataset's last row
+    // (2025-12-30). Label both; only the RF feeds the headline now.
+    const engineAnchor = result.reference_time || null;
+    const mlAsOf = (result.ml_result && result.ml_result.as_of) || null;
+    const latestObs = mlAsOf || engineAnchor;
+    const aligned = anchorKey(engineAnchor) === anchorKey(mlAsOf);
+    if (result.status === "success") {
+      result.forecast_anchors = {
+        latest_observation: latestObs,
+        latest_observation_source: mlAsOf ? "ml_dataset" : "statistical_engine",
+        statistical_engine_reference_time: engineAnchor,
+        statistical_engine_hourly_end:
+          (result.calibration && result.calibration.hourly_end) || null,
+        ml_as_of: mlAsOf,
+        anchors_aligned: aligned,
+        headline_source: result.headline_source || "legacy_engine",
+        // Kept as a stable field: the headline is single-source, so no
+        // long/short-horizon moment mixing happens in the reported number.
+        ensemble_mixes_anchors: false,
+        note:
+          result.headline_source === "rf_model"
+            ? "The headline probability comes from the RF model, anchored to " +
+              "the dataset's latest row. The statistical engine (Aug-2022 " +
+              "basis) is reported separately under legacy_engine and is not " +
+              "blended into the headline."
+            : "No ML model is served for this station, so the headline is the " +
+              "legacy statistical engine (Aug-2022 basis), labelled as such.",
+      };
+    }
+
+    // How old is the observation this forecast is anchored to? The cache/series
+    // end in the past, so surface that instead of letting the card imply "now".
+    const obsTime = latestObs;
+    const STALE_AFTER_HOURS = 48;
+    let ageHours = null;
+    if (obsTime) {
+      const t = new Date(obsTime).getTime();
+      if (Number.isFinite(t)) ageHours = Math.round(((Date.now() - t) / 36e5) * 10) / 10;
+    }
+    result.observation_freshness = {
+      latest_observation: obsTime,
+      latest_observation_source: mlAsOf ? "ml_dataset" : "statistical_engine",
+      age_hours: ageHours,
+      age_days: ageHours === null ? null : Math.round((ageHours / 24) * 10) / 10,
+      threshold_hours: STALE_AFTER_HOURS,
+      stale: ageHours === null ? true : ageHours > STALE_AFTER_HOURS,
+      note:
+        mlAsOf
+          ? "Age of the newest observation the forecast uses (the ML dataset's " +
+            "latest row), not the current time."
+          : "Age of the newest observation the forecast uses (the statistical " +
+            "engine's hourly series ends here), not the current time.",
+    };
 
     return sendJSON(res, 200, result);
   }
@@ -381,13 +714,26 @@ async function handleRequest(req, res) {
   if (pathname === "/api/levels/recent") {
     predictor.load();
     const stationKey = parsed.searchParams.get("station");
-    const def = stationDef(stationKey);
+    const levelsResolved = resolveForecastStation(stationKey, parsed.searchParams.get("state"));
+    if (!levelsResolved.key) {
+      return sendJSON(res, 200, {
+        available: false,
+        timestamps: [],
+        levels: [],
+        station: levelsResolved.registry ? stationSummary(levelsResolved.registry) : null,
+        reason: levelsResolved.registry
+          ? "No verified hourly water-level series exists for this station in this project."
+          : "Station is not in the CWC registry used by this project.",
+      });
+    }
+    const def = stationDef(levelsResolved.key);
     const st = predictor.loaded ? predictor.stations[def.key] : null;
     if (!st) {
-      return sendJSON(res, 200, { timestamps: [], levels: [] });
+      return sendJSON(res, 200, { available: false, timestamps: [], levels: [] });
     }
     const hr = st.hourly.slice(-72);
     return sendJSON(res, 200, {
+      available: true,
       station: def.name,
       station_key: def.key,
       monsoon_p95_m: Number(st.calibration.monsoon_p95_m.toFixed(2)),
@@ -410,7 +756,13 @@ async function handleRequest(req, res) {
     const referenceTime = parsed.searchParams.get("reference_time");
     const stationKey = parsed.searchParams.get("station");
     const format = (parsed.searchParams.get("format") || "json").toLowerCase();
-    const result = predictor.predict(referenceTime, stationKey);
+    const exportResolved = resolveForecastStation(stationKey, parsed.searchParams.get("state"));
+    if (!exportResolved.key) {
+      return sendJSON(res, 200, unsupportedStationPayload(exportResolved));
+    }
+    const result = predictor.predict(referenceTime, exportResolved.key);
+    result.forecast_tier = exportResolved.tier;
+    result.forecast_tier_label = tierLabel(exportResolved.tier);
 
     if (format === "csv") {
       const rows = [
@@ -570,7 +922,17 @@ async function handleRequest(req, res) {
           .toLowerCase();
         if (!hay.includes(q)) continue;
       }
-      const row = Object.assign({}, s, { has_observation: !!s.latest_observation });
+      const forecastKey = verifiedKeyForName(s.station);
+      const tier = forecastKey ? tierForStationKey(forecastKey) : 3;
+      const row = Object.assign({}, s, {
+        has_observation: !!s.latest_observation,
+        forecast_tier: tier,
+        forecast_tier_label: tierLabel(tier),
+        has_ml_model: forecastKey === "naraj",
+        has_verified_series: !!forecastKey,
+        forecast_station_key: forecastKey,
+        data_status: tierLabel(tier),
+      });
       if (useDist) {
         row.distance_km =
           Math.round(haversineKm(lat, lon, s.latitude, s.longitude) * 100) / 100;

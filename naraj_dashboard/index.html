@@ -218,6 +218,38 @@
     font-weight: 600;
 }
 
+.forecast-replay-note {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-left: 4px solid #b8860b;
+    border-radius: 6px;
+    background: #fdf6e3;
+    color: #6b4e00;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.forecast-persistence {
+    margin-top: 12px;
+    padding: 9px 12px;
+    border: 1px solid #dfe5ea;
+    border-radius: 8px;
+    background: #f8fafb;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.forecast-legacy-engine {
+    margin-top: 10px;
+    padding: 9px 12px;
+    border-left: 3px solid #9aa7b1;
+    border-radius: 6px;
+    background: #f4f6f8;
+    color: #4a5560;
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+
 .forecast-location {
     margin-top: 8px;
     font-size: 13px;
@@ -278,6 +310,120 @@
     background: #e2e3e5;
     color: #41464b;
 }
+
+.national-station-bar {
+    margin: 0 0 16px;
+    padding: 12px 14px;
+    border: 1px solid #d8e2ec;
+    border-radius: 10px;
+    background: #f7fafc;
+}
+
+.national-station-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.national-station-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.national-station-filters input {
+    flex: 1 1 260px;
+    min-width: 0;
+    padding: 8px 10px;
+    border: 1px solid #c3d1de;
+    border-radius: 7px;
+    font-size: 13px;
+}
+
+.national-station-filters select,
+.national-station-filters button {
+    padding: 8px 10px;
+    border: 1px solid #c3d1de;
+    border-radius: 7px;
+    background: white;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.national-station-selection {
+    font-size: 12.5px;
+    color: #33414f;
+    padding: 7px 9px;
+    border-radius: 7px;
+    background: white;
+    border: 1px solid #e0e7ee;
+}
+
+.national-station-results {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    max-height: 210px;
+    overflow-y: auto;
+    border: 1px solid #e0e7ee;
+    border-radius: 7px;
+    background: white;
+}
+
+.national-station-results li button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 7px 9px;
+    border: 0;
+    border-bottom: 1px solid #f0f3f6;
+    background: transparent;
+    font-size: 12.5px;
+    cursor: pointer;
+}
+
+.national-station-results li button:hover {
+    background: #eef5fc;
+}
+
+.national-tier-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 8px;
+    font-size: 11.5px;
+    color: #4a5563;
+}
+
+.tier-dot {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    margin-right: 4px;
+    vertical-align: middle;
+}
+
+.tier-1 { background: #b3261e; }
+.tier-2 { background: #e07b00; }
+.tier-3 { background: #1769aa; }
+
+.forecast-tier3 {
+    margin: 12px 0;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid #d9c58a;
+    background: #fffaf0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: #4a3d1c;
+}
+
+.forecast-tier3 strong { color: #5c4708; }
 
 .forecast-observation {
     margin-top: 14px;
@@ -712,10 +858,54 @@
     <p class="pub-demo-note">
 
         Select any location in India — search it, use your device location, or
-        click the map. The nearest real CWC rainfall and river stations are
-        looked up from the India-wide station registry.
+        click the map. Every marker is a real CWC station from the India-wide
+        registry; select one to drive the panels below. Each station is labelled
+        with what this project can actually do for it: an ML forecast (Naraj),
+        verified water-level series + legacy engine (Naraj, Alipingal,
+        Nimapara), or station metadata only.
 
     </p>
+
+
+    <!-- NATIONAL STATION EXPLORER -->
+
+    <div class="national-station-bar">
+
+        <div class="national-station-head">
+            <strong>CWC stations across India</strong>
+            <span id="national-station-count" class="muted">Loading stations…</span>
+        </div>
+
+        <div class="national-station-filters">
+            <input
+                type="search"
+                id="national-station-search"
+                placeholder="Filter by station, river or district"
+                autocomplete="off"
+                aria-label="Filter CWC stations by name, river or district"
+            />
+            <select
+                id="national-station-state"
+                aria-label="Filter CWC stations by state"
+            >
+                <option value="all">All states</option>
+            </select>
+            <button type="button" id="national-station-reset">Reset</button>
+        </div>
+
+        <div id="national-station-selection" class="national-station-selection">
+            No station selected — pick a marker or a search result. Tiers show what this project can actually do for each station.
+        </div>
+
+        <ul id="national-station-results" class="national-station-results" hidden></ul>
+
+        <div class="national-tier-legend">
+            <span><i class="tier-dot tier-1"></i> ML forecast (Naraj only)</span>
+            <span><i class="tier-dot tier-2"></i> Verified series + legacy engine</span>
+            <span><i class="tier-dot tier-3"></i> Station metadata only</span>
+        </div>
+
+    </div>
 
 
     <!-- ====================================================
@@ -1023,6 +1213,13 @@
         </div>
 
 
+        <div
+            id="forecast-replay-note"
+            class="forecast-replay-note"
+            hidden
+        ></div>
+
+
         <!-- STATION PICKER -->
 
         <div class="forecast-station-row">
@@ -1109,14 +1306,35 @@
 
 
         <div
+            id="forecast-tier3"
+            class="forecast-tier3"
+            hidden
+        ></div>
+
+
+        <div
             id="forecast-grid"
             class="forecast-grid"
         ></div>
 
 
         <div
+            id="forecast-persistence"
+            class="forecast-persistence"
+            hidden
+        ></div>
+
+
+        <div
             id="forecast-observation"
             class="forecast-observation"
+        ></div>
+
+
+        <div
+            id="forecast-legacy-engine"
+            class="forecast-legacy-engine"
+            hidden
         ></div>
 
 
@@ -1131,7 +1349,9 @@
                 </strong>
 
                 <span class="forecast-cone-note">
-                    Shaded band = projected range; dashed line = flood-signal level
+                    Shaded band = projected range; dashed line = flood-signal level.
+                    Built from the legacy engine's Aug-2022 hourly series, not from
+                    the headline observation.
                 </span>
 
             </div>

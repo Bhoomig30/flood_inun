@@ -534,9 +534,19 @@ function renderModelScope(modelScope) {
     outside = modelScope.location_specific_forecast_available === false;
   }
   if (note) {
-    note.hidden = !outside;
+    // A tier-3 station has no forecast at all, so the "study forecast below"
+    // coverage note would misdescribe the card.
+    note.hidden = forecastTier3Station ? true : !outside;
   }
   if (!el) return;
+  if (forecastTier3Station) {
+    el.textContent =
+      "📍 Selected station: " + (forecastTier3Station.station || "") +
+      (forecastTier3Station.state ? ", " + forecastTier3Station.state : "") +
+      " — no verified water-level series or trained model exists for this " +
+      "station in this project.";
+    return;
+  }
   if (!modelScope) {
     el.textContent = "";
     return;
@@ -842,6 +852,159 @@ function overallRiskClass(risk) {
 }
 
 var currentForecastStation = "naraj";
+// Set when the selected national station has no verified series/model. In that
+// state the card shows metadata only and never another station's numbers.
+var forecastTier3Station = null;
+
+function floodForecastQuery() {
+  if (forecastTier3Station) {
+    return (
+      "station=" + encodeURIComponent(forecastTier3Station.station) +
+      "&state=" + encodeURIComponent(forecastTier3Station.state || "")
+    );
+  }
+  return "station=" + encodeURIComponent(currentForecastStation || "naraj");
+}
+
+function setTier3StationOption(st) {
+  var picker = document.getElementById("forecast-station");
+  if (!picker) return;
+  var opt = picker.querySelector('option[data-national-tier3="1"]');
+  if (!opt) {
+    opt = document.createElement("option");
+    opt.setAttribute("data-national-tier3", "1");
+    picker.appendChild(opt);
+  }
+  opt.value = "";
+  opt.textContent = st.station + " · " + (st.state || "") + " (no forecast model)";
+  picker.value = "";
+}
+
+function removeTier3StationOption() {
+  var picker = document.getElementById("forecast-station");
+  if (!picker) return;
+  var opt = picker.querySelector('option[data-national-tier3="1"]');
+  if (opt) opt.remove();
+}
+
+function resetTier3View() {
+  var panel = document.getElementById("forecast-tier3");
+  if (panel) {
+    panel.hidden = true;
+    panel.innerHTML = "";
+  }
+  var grid = document.getElementById("forecast-grid");
+  if (grid) grid.hidden = false;
+  var cone = document.querySelector(".forecast-cone-wrap");
+  if (cone) cone.hidden = false;
+  var badge = document.querySelector("#flood-forecast .pc-badge-predicted");
+  if (badge) badge.style.display = "";
+}
+
+function renderTier3Forecast(data) {
+  var st = data.station || forecastTier3Station || {};
+  var name = st.name || st.station || "this station";
+  var state = st.state || "";
+
+  var statusEl = document.getElementById("forecast-status");
+  if (statusEl) {
+    statusEl.textContent =
+      "No forecast model or verified water-level series for " + name +
+      (state ? " (" + state + ")" : "") + " — station metadata only.";
+  }
+
+  var locationEl = document.getElementById("forecast-location");
+  if (locationEl) {
+    locationEl.textContent =
+      "📍 Selected station: " + name + (state ? ", " + state : "") +
+      " — this project has no verified water-level series or trained model here.";
+  }
+
+  var mlNote = document.getElementById("forecast-ml-note");
+  if (mlNote) {
+    mlNote.textContent = "no model for this station";
+    mlNote.className = "forecast-ml-note off";
+  }
+
+  var overallValue = document.getElementById("overall-risk-value");
+  if (overallValue) {
+    overallValue.textContent = "N/A";
+    overallValue.className = "overall-risk-value unknown";
+  }
+  var overallDetails = document.getElementById("overall-risk-details");
+  if (overallDetails) {
+    overallDetails.textContent =
+      "No probabilities are produced for stations outside the verified set — " +
+      "this project does not reuse another station's forecast.";
+  }
+
+  var grid = document.getElementById("forecast-grid");
+  if (grid) {
+    grid.innerHTML = "";
+    grid.hidden = true;
+  }
+  var cone = document.querySelector(".forecast-cone-wrap");
+  if (cone) cone.hidden = true;
+  // "PREDICTED" would misdescribe a station with no prediction at all.
+  // (display, not [hidden]: the badge has an explicit display rule.)
+  var badge = document.querySelector("#flood-forecast .pc-badge-predicted");
+  if (badge) badge.style.display = "none";
+  if (forecastConeChart) {
+    forecastConeChart.destroy();
+    forecastConeChart = null;
+  }
+
+  ["forecast-replay-note", "forecast-persistence", "forecast-legacy-engine"].forEach(
+    function (id) {
+      var el = document.getElementById(id);
+      if (el) el.hidden = true;
+    }
+  );
+
+  var obsEl = document.getElementById("forecast-observation");
+  if (obsEl) {
+    var parts = [];
+    parts.push("<strong>" + escapeHtml(name) + " · registered station</strong>");
+    var meta = [];
+    if (state) meta.push(state);
+    if (st.district) meta.push("district " + st.district);
+    if (st.river) meta.push("river " + st.river);
+    if (st.kind) meta.push(st.kind + " station");
+    if (Number.isFinite(st.latitude) && Number.isFinite(st.longitude)) {
+      meta.push(st.latitude.toFixed(3) + ", " + st.longitude.toFixed(3));
+    }
+    if (meta.length) parts.push(escapeHtml(meta.join(" · ")));
+    if (st.latest_observation) {
+      parts.push(
+        "Latest registry observation: <strong>" +
+        escapeHtml(String(st.latest_observation.value)) + " " +
+        escapeHtml(String(st.latest_observation.unit || "")) +
+        "</strong> at " +
+        escapeHtml(
+          String(st.latest_observation.time).slice(0, 16).replace("T", " ")
+        ) + " UTC"
+      );
+    } else {
+      parts.push("No observation is recorded for this station in the registry.");
+    }
+    if (st.n_obs) parts.push(escapeHtml(String(st.n_obs)) + " observations on record.");
+    obsEl.innerHTML = parts.join("<br>");
+  }
+
+  var panel = document.getElementById("forecast-tier3");
+  if (panel) {
+    panel.hidden = false;
+    panel.innerHTML =
+      "<strong>No forecast for " + escapeHtml(name) + ".</strong> " +
+      escapeHtml(data.reason || "This station is outside the verified set.") +
+      " <br><span class=\"muted\">" +
+      escapeHtml(
+        data.scope_note ||
+          "Forecasts are served for Naraj (trained model) and Alipingal/Nimapara " +
+            "(verified series, legacy engine only)."
+      ) + "</span>";
+  }
+}
 
 async function loadFloodForecast() {
   var card = document.getElementById("flood-forecast");
@@ -853,10 +1016,7 @@ async function loadFloodForecast() {
       statusEl.textContent = "Loading 6h / 12h / 24h AI forecast...";
     }
 
-    var url =
-      API_BASE_URL +
-      "/api/forecast?station=" +
-      encodeURIComponent(currentForecastStation);
+    var url = API_BASE_URL + "/api/forecast?" + floodForecastQuery();
 
     var response = await fetch(url);
     if (!response.ok) {
@@ -865,20 +1025,42 @@ async function loadFloodForecast() {
 
     var data = await response.json();
 
+    // Tier 3: registry metadata only. Never fall through to the forecast UI.
+    if (
+      data.status === "station_not_supported" ||
+      data.status === "unknown_station" ||
+      data.forecast_tier === 3
+    ) {
+      renderTier3Forecast(data);
+      return;
+    }
+
     if (data.status === "error" || !data.forecast) {
       throw new Error(data.error || "Invalid forecast response from API.");
     }
+
+    resetTier3View();
 
     var horizons = ["6h", "12h", "24h"];
     var labels = { "6h": "6 Hours", "12h": "12 Hours", "24h": "24 Hours" };
 
     var overallRisk = data.overall_risk || "LOW";
     var studyRegion = data.study_region || "Naraj / Cuttack, Odisha (model study region)";
-    var observationTime =
-      data.reference_time || "Latest available historical observation";
     var observed = data.observed || {};
     var cone = data.forecast_cone || [];
-    var mlEnabled = data.ml_enabled === true;
+    var headlineSource =
+      data.headline_source || (data.ml_enabled === true ? "rf_model" : "legacy_engine");
+    var isRfHeadline = headlineSource === "rf_model";
+    var mlAsOf =
+      data.ml_result && data.ml_result.as_of
+        ? String(data.ml_result.as_of).slice(0, 16).replace("T", " ")
+        : null;
+    // The legacy engine's result is reported beside the headline, never inside it.
+    var legacyEngine = data.legacy_engine || null;
+    var legacyStem =
+      legacyEngine && legacyEngine.reference_time
+        ? String(legacyEngine.reference_time).slice(0, 16).replace("T", " ")
+        : "2022-08-31 00:00";
 
     function forecastItem(key) {
       var forecast = data.forecast[key] || {};
@@ -888,24 +1070,21 @@ async function loadFloodForecast() {
           : 0
       );
       var risk = forecast.risk || "LOW";
-      var mlP =
-        forecast.ml_probability_percent !== undefined
-          ? Number(forecast.ml_probability_percent)
+      var engineItem = legacyEngine && legacyEngine.forecast
+        ? legacyEngine.forecast[key]
+        : null;
+      var engineP =
+        engineItem && engineItem.flood_probability_percent !== undefined
+          ? Number(engineItem.flood_probability_percent)
           : null;
 
       var mlBadge = "";
-      if (mlEnabled && mlP !== null) {
-        var mlWeight =
-          forecast.ml_weight !== undefined ? Number(forecast.ml_weight) : 0.4;
-        var statApprox =
-          mlWeight < 1
-            ? (probability - mlWeight * mlP) / (1 - mlWeight)
-            : probability;
+      if (isRfHeadline && engineP !== null) {
         mlBadge =
-          '<span class="forecast-ml-badge" title="Random Forest model: ' +
-          mlP.toFixed(1) + "% (weight " + (mlWeight * 100).toFixed(0) +
-          "%) · statistical engine: " + statApprox.toFixed(1) + '%">' +
-          "RF " + mlP.toFixed(0) + "%</span>";
+          '<span class="forecast-ml-badge" title="Legacy statistical engine, observation basis ' +
+          escapeHtml(legacyStem) +
+          '" — not included in the headline">engine ' +
+          engineP.toFixed(1) + "%</span>";
       }
 
       return (
@@ -937,13 +1116,15 @@ async function loadFloodForecast() {
     var maxProbability = Math.max.apply(null, probabilities);
 
     if (statusEl) {
+      // The amber replay banner carries the "not a live forecast" warning, so
+      // the status line only names the source and generation time.
       statusEl.textContent =
-        (mlEnabled
-          ? "Historical-data AI forecast (statistical engine + Random Forest ensemble) — "
-          : "Historical-data AI forecast (statistical engine) — ") +
-        "generated " +
+        (isRfHeadline
+          ? "Random Forest headline (dataset row " + (mlAsOf || "latest") + " UTC)"
+          : "Legacy statistical engine only (no ML model for this station)") +
+        " — generated " +
         escapeHtml(String(data.generated_at || "").replace("T", " ").slice(0, 16)) +
-        " UTC from real CWC records. Not a live government flood warning.";
+        " UTC from real CWC records.";
     }
 
     var locationEl = document.getElementById("forecast-location");
@@ -970,14 +1151,14 @@ async function loadFloodForecast() {
 
     var mlNote = document.getElementById("forecast-ml-note");
     if (mlNote) {
-      if (data.ml_enabled === true) {
-        mlNote.textContent = "RF ensemble active";
+      if (isRfHeadline) {
+        mlNote.textContent = "RF headline";
         mlNote.className = "forecast-ml-note on";
       } else if (data.ml_capable === false) {
-        mlNote.textContent = "statistical engine";
+        mlNote.textContent = "legacy engine (no ML for this station)";
         mlNote.className = "forecast-ml-note off";
       } else {
-        mlNote.textContent = "RF unavailable";
+        mlNote.textContent = "RF unavailable — legacy engine";
         mlNote.className = "forecast-ml-note off";
       }
     }
@@ -992,8 +1173,33 @@ async function loadFloodForecast() {
     var overallDetails = document.getElementById("overall-risk-details");
     if (overallDetails) {
       overallDetails.textContent =
-        "Highest predicted probability: " + maxProbability.toFixed(1) +
-        "% across the 6h, 12h and 24h forecasts (study-station output).";
+        (isRfHeadline
+          ? "Highest RF probability: "
+          : "Highest legacy-engine probability: ") +
+        maxProbability.toFixed(1) +
+        "% across the 6h, 12h and 24h horizons (study-station output).";
+    }
+
+    // Historical-replay banner: everything on this card comes from a record
+    // that stops in the past, so say so instead of implying a live forecast.
+    var replayEl = document.getElementById("forecast-replay-note");
+    if (replayEl) {
+      var endStamp =
+        data.observation_freshness && data.observation_freshness.latest_observation
+          ? String(data.observation_freshness.latest_observation)
+              .slice(0, 16)
+              .replace("T", " ")
+          : null;
+      if (endStamp) {
+        replayEl.hidden = false;
+        replayEl.innerHTML =
+          "<strong>Historical replay — not a live forecast.</strong> Every value " +
+          "on this card replays the CWC record, which ends at <strong>" +
+          escapeHtml(endStamp) + " UTC</strong>. No observation after that date " +
+          "exists in this deployment, so this is not a current flood risk.";
+      } else {
+        replayEl.hidden = true;
+      }
     }
 
     if (grid) {
@@ -1003,29 +1209,103 @@ async function loadFloodForecast() {
         forecastItem("24h");
     }
 
+    // Persistence indicator: latest dataset row vs the flood threshold.
+    var persistEl = document.getElementById("forecast-persistence");
+    if (persistEl) {
+      var persist = data.persistence || null;
+      // The persistence check is Naraj-specific (the served dataset models
+      // Naraj); don't show it next to a different station's headline.
+      if (persist && persist.available && data.station_key === "naraj") {
+        persistEl.hidden = false;
+        persistEl.innerHTML =
+          "<strong>Persistence check (latest dataset row):</strong> Naraj " +
+          Number(persist.level_m).toFixed(2) + " m at " +
+          escapeHtml(String(persist.level_as_of).slice(0, 16)) + " UTC vs the " +
+          Number(persist.threshold_m).toFixed(2) + " m flood threshold — " +
+          (persist.above_threshold
+            ? "<strong>at or above threshold</strong>"
+            : "<strong>" + Math.abs(Number(persist.margin_m)).toFixed(2) +
+              " m below it</strong>") +
+          '. <span class="muted">Level from the dataset\'s last row; threshold ' +
+          "from hf_forecast_baseline.json.</span>";
+      } else {
+        persistEl.hidden = true;
+      }
+    }
+
     var observationEl = document.getElementById("forecast-observation");
     if (observationEl) {
       var stationLabel =
         data.location && data.location.station
           ? data.location.station
           : "Naraj";
-      var obsHtml = "<strong>" + escapeHtml(stationLabel) +
-        " · Observation basis:</strong> " +
-        escapeHtml(observationTime.slice(0, 16).replace("T", " ")) + " UTC";
-      if (typeof observed.water_level_m === "number") {
-        obsHtml += " · River level " + observed.water_level_m.toFixed(2) + " m";
-        obsHtml += " (" + observed.monsoon_percentile + "th monsoon percentile)";
+      // Freshness: the series ends in the past, so say so on the card itself.
+      var fresh = data.observation_freshness || null;
+      var freshHtml = "";
+      if (fresh && fresh.latest_observation) {
+        var obsStamp = String(fresh.latest_observation).slice(0, 16).replace("T", " ");
+        var ageLabel =
+          fresh.age_days === null || fresh.age_days === undefined
+            ? "age unknown"
+            : fresh.age_days + " days old";
+        freshHtml = fresh.stale
+          ? '<span class="freshness-badge is-stale">⚠ STALE DATA: latest observation ' +
+            escapeHtml(obsStamp) + " UTC (" + escapeHtml(ageLabel) +
+            "; stale past " + escapeHtml(String(fresh.threshold_hours)) + " h)</span> "
+          : '<span class="freshness-badge is-fresh">Latest observation ' +
+            escapeHtml(obsStamp) + " UTC (" + escapeHtml(ageLabel) + ")</span> ";
       }
-      if (typeof observed.rise_6h_m === "number") {
-        obsHtml += " · Rise 6h " +
-          (observed.rise_6h_m >= 0 ? "+" : "") + observed.rise_6h_m.toFixed(2) +
-          " m / 12h " +
-          (observed.rise_12h_m >= 0 ? "+" : "") + observed.rise_12h_m.toFixed(2) +
-          " m / 24h " +
-          (observed.rise_24h_m >= 0 ? "+" : "") + observed.rise_24h_m.toFixed(2) +
-          " m";
+      // Headline basis first; the legacy engine's own basis is named as
+      // excluded so nobody reads the 2022 river level as the current one.
+      var obsHtml =
+        freshHtml + "<strong>" + escapeHtml(stationLabel) + " · Headline:</strong> ";
+      if (isRfHeadline) {
+        obsHtml += "Random Forest, input row " +
+          escapeHtml(mlAsOf || "—") + " UTC";
+        obsHtml +=
+          ' · <span class="muted">legacy engine basis ' +
+          escapeHtml(legacyStem) +
+          " UTC, excluded from the headline</span>";
+      } else {
+        obsHtml +=
+          "legacy statistical engine, observation basis " +
+          escapeHtml(legacyStem) +
+          " UTC — no ML model is served for this station";
       }
+      // The engine's observed level is an Aug-2022 value, so it stays in the
+      // legacy block rather than sitting next to the current ML headline.
       observationEl.innerHTML = obsHtml;
+
+      // Legacy engine detail, in its own block — never in the headline.
+      var legacyEl = document.getElementById("forecast-legacy-engine");
+      if (legacyEl) {
+        if (isRfHeadline && legacyEngine && legacyEngine.forecast) {
+          var legacyParts = horizons
+            .map(function (h) {
+              var item = legacyEngine.forecast[h] || {};
+              var p = Number(item.flood_probability_percent);
+              return h + " " + (Number.isFinite(p) ? p.toFixed(1) : "—") + "%";
+            })
+            .join(" · ");
+          var legacyLevel =
+            legacyEngine.observed && Number(legacyEngine.observed.water_level_m);
+          legacyEl.hidden = false;
+          legacyEl.innerHTML =
+            "<strong>Legacy engine (observation basis " +
+            escapeHtml(legacyStem) +
+            " UTC, not part of the headline):</strong> " +
+            escapeHtml(legacyParts) +
+            (Number.isFinite(legacyLevel)
+              ? " · engine observed river level " + legacyLevel.toFixed(2) + " m"
+              : "") +
+            " · " +
+            escapeHtml(
+              "rule-based rise/level/seasonal engine, kept for comparison only"
+            );
+        } else {
+          legacyEl.hidden = true;
+        }
+      }
 
       renderForecastCone(cone, observed, currentForecastStation);
     }
@@ -1221,6 +1501,9 @@ function initializeForecastActions() {
   var stationSelect = document.getElementById("forecast-station");
   if (stationSelect) {
     stationSelect.addEventListener("change", function () {
+      if (!stationSelect.value) return; // tier-3 placeholder option
+      forecastTier3Station = null;
+      removeTier3StationOption();
       currentForecastStation = stationSelect.value || "naraj";
       updateForecastExportLinks();
       loadFloodForecast();
@@ -1244,6 +1527,11 @@ function initializeForecastActions() {
 function updateForecastExportLinks() {
   var csv = document.getElementById("forecast-export-csv");
   var json = document.getElementById("forecast-export-json");
+  // No export exists for a station this project cannot forecast.
+  var hide = !!forecastTier3Station;
+  if (csv) csv.style.display = hide ? "none" : "";
+  if (json) json.style.display = hide ? "none" : "";
+  if (hide) return;
   var suffix =
     "?station=" + encodeURIComponent(currentForecastStation) + "&format=";
   if (csv) csv.setAttribute("href", API_BASE_URL + "/api/forecast/export" + suffix + "csv");
@@ -1373,6 +1661,313 @@ function initializeLocationSearch() {
   });
 }
 
+// ---------------------------------------------------------------------------
+// NATIONAL STATION EXPLORER
+//   All 842 registry stations, clustered by zoom level. Selecting one drives
+//   the whole location pipeline; the forecast card then states which tier the
+//   station is in and refuses to borrow another station's numbers.
+// ---------------------------------------------------------------------------
+
+var nationalStations = [];
+var nationalStationLayer = null;
+var selectedNationalStation = null;
+
+var TIER_COLORS = { 1: "#b3261e", 2: "#e07b00", 3: "#1769aa" };
+
+function nationalTierColor(tier) {
+  return TIER_COLORS[tier] || TIER_COLORS[3];
+}
+
+function nationalQuery() {
+  var el = document.getElementById("national-station-search");
+  return el ? String(el.value || "").trim().toLowerCase() : "";
+}
+
+function nationalStateFilter() {
+  var el = document.getElementById("national-station-state");
+  return el ? el.value || "all" : "all";
+}
+
+function nationalFilteredStations() {
+  var q = nationalQuery();
+  var state = nationalStateFilter();
+  return nationalStations.filter(function (s) {
+    if (!Number.isFinite(s.latitude) || !Number.isFinite(s.longitude)) return false;
+    if (state !== "all" && s.state !== state) return false;
+    if (q) {
+      var hay = [s.station, s.river, s.district, s.state, s.basin]
+        .join(" ")
+        .toLowerCase();
+      if (hay.indexOf(q) === -1) return false;
+    }
+    return true;
+  });
+}
+
+async function initNationalStations() {
+  var countEl = document.getElementById("national-station-count");
+  try {
+    var res = await fetch(API_BASE_URL + "/api/stations/india_cwc?limit=2000");
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    var data = await res.json();
+    nationalStations = Array.isArray(data.stations) ? data.stations : [];
+    if (!nationalStations.length) {
+      if (countEl) countEl.textContent = "No stations in the registry.";
+      return;
+    }
+
+    var tiers = { 1: 0, 2: 0, 3: 0 };
+    var states = {};
+    nationalStations.forEach(function (s) {
+      var t = s.forecast_tier || 3;
+      tiers[t] = (tiers[t] || 0) + 1;
+      if (s.state) states[s.state] = true;
+    });
+    if (countEl) {
+      countEl.textContent =
+        nationalStations.length + " stations · " +
+        Object.keys(states).length + " states · " +
+        (tiers[1] + tiers[2]) + " with verified series";
+    }
+
+    var stateSel = document.getElementById("national-station-state");
+    if (stateSel) {
+      Object.keys(states)
+        .sort()
+        .forEach(function (name) {
+          var opt = document.createElement("option");
+          opt.value = name;
+          opt.textContent = name;
+          stateSel.appendChild(opt);
+        });
+    }
+
+    var search = document.getElementById("national-station-search");
+    if (search) {
+      var debounce = null;
+      search.addEventListener("input", function () {
+        clearTimeout(debounce);
+        debounce = setTimeout(function () {
+          renderNationalSearchResults();
+          renderNationalMarkers();
+        }, 150);
+      });
+      search.addEventListener("keydown", function (event) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          var first = nationalFilteredStations()[0];
+          if (first) selectNationalStation(first);
+        }
+      });
+    }
+    if (stateSel) {
+      stateSel.addEventListener("change", function () {
+        renderNationalSearchResults();
+        renderNationalMarkers();
+      });
+    }
+    var reset = document.getElementById("national-station-reset");
+    if (reset) {
+      reset.addEventListener("click", function () {
+        if (search) search.value = "";
+        if (stateSel) stateSel.value = "all";
+        renderNationalSearchResults();
+        renderNationalMarkers();
+      });
+    }
+
+    whenPublicMapReady(function () {
+      renderNationalMarkers();
+    });
+  } catch (error) {
+    console.error("National station registry failed:", error);
+    if (countEl) {
+      countEl.textContent =
+        "Station registry unavailable — " + error.message +
+        ". The map still accepts any location.";
+    }
+  }
+}
+
+function whenPublicMapReady(fn) {
+  var tries = 0;
+  (function attempt() {
+    var map = null;
+    try {
+      if (typeof map1 !== "undefined" && map1) map = map1;
+    } catch (e) { /* not ready */ }
+    if (map) {
+      fn();
+      return;
+    }
+    tries += 1;
+    if (tries < 40) setTimeout(attempt, 250);
+  })();
+}
+
+function renderNationalMarkers() {
+  var map = null;
+  try {
+    if (typeof map1 !== "undefined" && map1) map = map1;
+  } catch (e) { /* not ready */ }
+  if (!map || !nationalStations.length) return;
+
+  if (!map.__nationalZoomBound) {
+    map.__nationalZoomBound = true;
+    map.on("zoomend", function () {
+      renderNationalMarkers();
+    });
+  }
+
+  if (nationalStationLayer) {
+    map.removeLayer(nationalStationLayer);
+    nationalStationLayer = null;
+  }
+
+  var stations = nationalFilteredStations();
+  var layer = L.layerGroup();
+  var zoom = map.getZoom();
+  // Degrees per cluster cell: coarse at country scale, individual at city scale.
+  var cell = zoom >= 9 ? 0 : zoom >= 7 ? 0.5 : zoom >= 5 ? 1.5 : 3;
+
+  if (!cell) {
+    stations.forEach(function (st) {
+      layer.addLayer(nationalMarker(st));
+    });
+  } else {
+    var buckets = {};
+    stations.forEach(function (st) {
+      var key =
+        Math.floor(st.latitude / cell) + ":" + Math.floor(st.longitude / cell);
+      (buckets[key] = buckets[key] || []).push(st);
+    });
+    Object.keys(buckets).forEach(function (key) {
+      var group = buckets[key];
+      var count = group.length;
+      var lat = 0;
+      var lon = 0;
+      var topTier = 3;
+      group.forEach(function (s) {
+        lat += s.latitude;
+        lon += s.longitude;
+        topTier = Math.min(topTier, s.forecast_tier || 3);
+      });
+      lat = lat / count;
+      lon = lon / count;
+      var color = nationalTierColor(topTier);
+      var marker = L.circleMarker([lat, lon], {
+        radius: Math.min(26, 6 + Math.sqrt(count) * 2.2),
+        color: color,
+        weight: 1,
+        fillColor: color,
+        fillOpacity: 0.35,
+        bubblingMouseEvents: false,
+      });
+      marker.bindTooltip(
+        count + " station" + (count === 1 ? "" : "s") + " — click to zoom in",
+        { direction: "top" }
+      );
+      marker.on("click", function () {
+        map.setView([lat, lon], Math.min(zoom + 2, 11));
+      });
+      layer.addLayer(marker);
+    });
+  }
+
+  layer.addTo(map);
+  nationalStationLayer = layer;
+}
+
+function nationalMarker(st) {
+  var tier = st.forecast_tier || 3;
+  var color = nationalTierColor(tier);
+  var marker = L.circleMarker([st.latitude, st.longitude], {
+    radius: tier === 3 ? 4 : 6,
+    color: color,
+    weight: 1,
+    fillColor: color,
+    fillOpacity: 0.8,
+    bubblingMouseEvents: false,
+  });
+  marker.bindTooltip(
+    st.station + " · " + (st.state || "") + " — " + (st.forecast_tier_label || ""),
+    { direction: "top" }
+  );
+  marker.on("click", function () {
+    selectNationalStation(st);
+  });
+  return marker;
+}
+
+function renderNationalSearchResults() {
+  var list = document.getElementById("national-station-results");
+  if (!list) return;
+  var q = nationalQuery();
+  if (!q) {
+    list.hidden = true;
+    list.innerHTML = "";
+    return;
+  }
+  var matches = nationalFilteredStations().slice(0, 10);
+  list.hidden = false;
+  if (!matches.length) {
+    list.innerHTML = '<li><button type="button" disabled>No station matches</button></li>';
+    return;
+  }
+  list.innerHTML = "";
+  matches.forEach(function (st) {
+    var li = document.createElement("li");
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.innerHTML =
+      escapeHtml(st.station) + " · " + escapeHtml(st.state || "") +
+      ' <span class="muted">(' + escapeHtml(st.forecast_tier_label || "") + ")</span>";
+    btn.addEventListener("click", function () {
+      selectNationalStation(st);
+    });
+    li.appendChild(btn);
+    list.appendChild(li);
+  });
+}
+
+function selectNationalStation(st) {
+  if (!st) return;
+  selectedNationalStation = st;
+  var label = document.getElementById("national-station-selection");
+  if (label) {
+    var obsNote = st.latest_observation
+      ? "latest registry " + (st.kind || "") + " observation " +
+        st.latest_observation.value + " " +
+        (st.latest_observation.unit || "") + " at " +
+        String(st.latest_observation.time).slice(0, 16).replace("T", " ") +
+        " UTC"
+      : "no observation recorded in the registry";
+    label.innerHTML =
+      "<strong>" + escapeHtml(st.station) + "</strong> · " +
+      escapeHtml(st.state || "state unknown") + " · " +
+      escapeHtml(st.forecast_tier_label || "") + " · " + escapeHtml(obsNote);
+  }
+
+  if (st.forecast_station_key) {
+    forecastTier3Station = null;
+    removeTier3StationOption();
+    currentForecastStation = st.forecast_station_key;
+    var picker = document.getElementById("forecast-station");
+    if (picker) picker.value = st.forecast_station_key;
+  } else {
+    forecastTier3Station = st;
+    setTier3StationOption(st);
+  }
+  updateForecastExportLinks();
+
+  setSelectedLocation(st.latitude, st.longitude, st.station, {
+    state: st.state || "",
+    zoom: 8,
+  });
+  loadFloodForecast();
+  renderNationalSearchResults();
+}
+
 // Let public.js register its maps with the shared location pipeline.
 // Newly-registered maps immediately adopt the current selection (or the
 // India-wide default when nothing is selected yet).
@@ -1424,6 +2019,7 @@ function startDashboard() {
   initializeLocationSearch();
   initializeForecastActions();
   updateForecastExportLinks();
+  initNationalStations();
   bindPublicMaps();
 
   // Panels start honest and empty until the user selects a location.

@@ -275,21 +275,63 @@
       <div class="panel-header"><h2>System Architecture &amp; Generalization</h2></div>
       <p class="muted" style="margin-top:0;">
         The pipeline is data-source-agnostic: swap in another station's CWC series, DEM tile, and
-        Sentinel-1 pair, and the same stages run. The <strong>only</strong> part of this diagram that
-        does not exist yet is the AI/ML layer at the bottom — <strong>explicitly future work</strong>,
-        not a claim about the current system.
+        Sentinel-1 pair, and the same stages run. The <strong>temporal AI/ML layer now exists</strong>
+        — three calibrated Random Forest models forecasting flood probability at 6/12/24 h, trained on
+        the project's real CWC dataset (see the model panel below). What the diagram still marks as
+        future work is narrower than it once was: <strong>ML-based scene flood extent</strong> (the
+        candidate mask remains rule-based change detection) and the
+        <strong>exposure / decision-support layer</strong>, which still has no verified impact data.
       </p>
       <img src="assets/architecture_diagram.png" alt="System architecture: CWC + Sentinel-1 + DEM + NDEM feeds data harmonization, then SAR change detection, candidate flood generation, independent validation, decision-support outputs, and future multi-event/multi-site AI/ML layer" style="max-width:100%; border:1px solid var(--line); border-radius:6px;" />
     </div>
 
     <div class="panel wide-panel" id="aiml-panel">
+      <div class="panel-header"><h2>Trained AI/ML Models <span class="tag tag-observed">TRAINED</span></h2></div>
+      <p class="muted" style="margin-top:0;">
+        <strong>Two trained Random Forest models exist in this project</strong> (no synthetic training data):
+      </p>
+      <ol class="muted small" style="margin:0 0 10px 18px;">
+        <li><strong>Calibrated 6/12/24 h forecast model</strong> — sigmoid-calibrated
+          <code>RandomForestClassifier</code> predicting whether Naraj exceeds its danger level within
+          6, 12 and 24 hours, using <strong>CWC rainfall, water-level and calendar features only</strong>
+          (71 features from 10 rain gauges + Naraj/Alipingal/Nimapara gauges, 2021–2025, chronological
+          70/15/15 split). Served live by <code>/api/forecast</code>.</li>
+        <li><strong>12-feature spatial inundation model</strong> — Random Forest scene classifier for
+          flood extent on Sentinel-1 tiles (threshold 0.65, tuned on the validation split), evaluated
+          on a held-out tile split: pooled pixel IoU 0.754 / F1 0.860; mean per-tile IoU 0.533. Results
+          are in <code>data/ai_flood/test_set_metrics.json</code> and shown in the SAR Analysis tab.
+          <strong>Split caveat:</strong> the split is by tile, not by event or location. All 67 test
+          chips come from the same 11 Sentinel-1 flood events as the training chips (36 sit within
+          10 km of a training chip), so these scores are likely optimistic and should be read as an
+          upper bound until an event-held-out evaluation is run.</li>
+      </ol>
+      <div id="aiml-model-content">
+        <p class="muted small">Loading trained-model metrics…</p>
+      </div>
+      <p class="muted small">
+        <strong>Scope:</strong> the forecast models are calibrated for the Naraj/Cuttack study region
+        only — no India-wide probability is produced; the spatial model is generalizable to any scene
+        with matching Sentinel-1 imagery. Retrain the forecast models with
+        <code>python3 naraj_dashboard/ml_train.py</code>; their metadata and holdout skill are read from
+        <code>/api/model/info</code>.
+      </p>
+    </div>
+
+    <div class="panel wide-panel" id="aiml-roadmap-panel">
       <div class="panel-header"><h2>Next-Generation AI/ML Pipeline <span class="tag tag-pending">FUTURE WORK</span></h2></div>
       <p class="muted" style="margin-top:0;">
-        The candidate mask shown in this prototype is a <strong>rule-based change-detection
-        result</strong>, not an AI/ML prediction. No trained model exists in this project. The
-        diagram below distinguishes the current demonstration from the future development path.
+        Still open, even with both models trained: <strong>SAR/DEM feature fusion</strong> (stage 3 — the
+        served forecast model uses CWC rainfall/water-level/temporal features only, no SAR or DEM inputs),
+        <strong>ML flood extent with per-pixel confidence</strong> (stage 6 — the candidate mask in the SAR
+        Analysis tab remains rule-based change detection, with no calibrated per-pixel probability), and
+        <strong>exposure-based decision support</strong> (stage 7 — pending verified population,
+        infrastructure and asset data, none of which has been obtained).
       </p>
-      <img src="assets/aiml_roadmap_diagram.png" alt="AI/ML roadmap: current demonstration vs future multi-event data, data harmonization, SAR+CWC+DEM features, multi-event training data, AI/ML flood model, flood extent and confidence, decision support" style="max-width:420px; display:block; margin:0 auto; border:1px solid var(--line); border-radius:6px;" />
+      <p class="muted small">
+        The roadmap figure below <strong>predates both trained models</strong>: its bottom bar
+        (“no trained model exists”) is out of date.
+      </p>
+      <img src="assets/aiml_roadmap_diagram.png" alt="AI/ML roadmap: the current demonstration, then multi-event data, data harmonization, SAR+CWC+DEM features, multi-event training data, AI/ML flood model, flood extent and confidence, decision support — the bottom band reflects the pre-training state" style="max-width:420px; display:block; margin:0 auto; border:1px solid var(--line); border-radius:6px;" />
     </div>
 
     <div class="panel wide-panel">

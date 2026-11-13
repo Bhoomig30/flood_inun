@@ -605,6 +605,27 @@ html, body {
     line-height: 1.6;
 }
 
+/* Freshness of the observation the forecast is anchored to */
+.freshness-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    padding: 2px 7px;
+    border-radius: 3px;
+    margin: 0 0 4px 0;
+}
+.freshness-badge.is-stale {
+    background: rgba(194, 118, 12, 0.16);
+    color: #8a4b00;
+    border: 1px solid rgba(194, 118, 12, 0.45);
+}
+.freshness-badge.is-fresh {
+    background: rgba(15, 107, 120, 0.12);
+    color: #0f6b78;
+    border: 1px solid rgba(15, 107, 120, 0.3);
+}
+
 .overall-flood-risk {
     margin: 14px 0;
     padding: 14px 16px;
@@ -976,6 +997,21 @@ body {
   border-radius: var(--radius-sm, 8px);
   overflow: hidden;
   box-shadow: var(--shadow-xs);
+}
+
+/* Compact metrics table: fits the narrow research-page column */
+.aiml-metrics-wrap {
+  overflow-x: auto;
+  margin: 8px 0;
+}
+.aiml-metrics {
+  font-size: 10.5px;
+  margin: 0;
+}
+.aiml-metrics th,
+.aiml-metrics td {
+  padding: 3px 4px;
+  white-space: nowrap;
 }
 .model-skill-table th {
   background: rgba(11, 51, 80, 0.05);

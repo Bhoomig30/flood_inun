@@ -47,6 +47,13 @@ from sklearn.metrics import (
     confusion_matrix,
 )
 
+try:  # scikit-learn >= 1.6: supported way to calibrate an already-fitted model
+    from sklearn.frozen import FrozenEstimator
+
+    HAS_FROZEN = True
+except ImportError:  # scikit-learn < 1.6: only cv="prefit" exists
+    HAS_FROZEN = False
+
 HERE = Path(__file__).resolve().parent
 DATASET = HERE / "data" / "hf" / "forecast_dataset.csv"
 MODEL_DIR = HERE / "data" / "ml_models"
@@ -241,8 +248,14 @@ for horizon in HORIZONS:
 
     # --- probability calibration fitted on the VALIDATION slice
     print("  fitting sigmoid calibration on validation slice ...")
-    calib = CalibratedClassifierCV(base, method="sigmoid", cv="prefit")
-    calib.fit(imputer.transform(X_va), y_va)
+    X_va_i = imputer.transform(X_va)
+    if HAS_FROZEN:
+        # FrozenEstimator keeps the fitted forest fixed and fits only the
+        # sigmoid on the validation slice (what cv="prefit" used to do).
+        calib = CalibratedClassifierCV(FrozenEstimator(base), method="sigmoid")
+    else:
+        calib = CalibratedClassifierCV(base, method="sigmoid", cv="prefit")
+    calib.fit(X_va_i, y_va)
 
     p_val = calib.predict_proba(imputer.transform(X_va))[:, 1]
     p_test = calib.predict_proba(imputer.transform(X_te))[:, 1]
