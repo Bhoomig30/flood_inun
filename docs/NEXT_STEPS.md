@@ -168,6 +168,27 @@ overpass gap, or whether DEM/landcover static features alone are the target.
 
 ## 4. Stage 6 — flood extent confidence
 
+### Evaluation caveat: the spatial test split is not event-held-out (measured 2026-11-13)
+
+The 12-feature inundation model is reported at pooled pixel IoU 0.754 / F1 0.860
+(mean per-tile IoU 0.533) on 66 "held-out" test tiles. Those tiles are
+**Sen1Floods11 chips split per tile, not per event or location**:
+
+| Check (from the dataset's split files + tile georeferencing) | Result |
+| --- | --- |
+| Events represented in the data | 11 (Bolivia, Spain, Ghana, India, Cambodia, Sri Lanka, Nigeria, Pakistan, Paraguay, Somalia, USA) |
+| Test chips whose event also has training chips | **67 of 67** |
+| Test chips within 10 km of a training chip | **36 of 67** |
+| Test chips within 25 / 50 km | 62 / 66 |
+| Test chips with identical bounds to a training chip | 0 |
+
+So the test set shares flood events, acquisition dates and, for half the chips,
+neighbouring ground with the training set. Spatial autocorrelation and shared
+acquisition conditions flatter the model; **the 0.754 pooled IoU should be read
+as an upper bound** until an event-held-out (or spatially blocked) split exists.
+The UI and `research.html` carry this caveat. An event-held-out evaluation is the
+first step below, and is cheap compared with the rest of this section.
+
 Four separable pieces, each blocked differently:
 
 | Piece | What is needed | What is missing | Effort | First step |

@@ -560,6 +560,8 @@ function createAIResultsPanel() {
       Mean IoU per tile ${(aiFloodTestMetrics.per_tile.mean_iou * 100).toFixed(1)}% &middot;
       pooled IoU ${(aiFloodTestMetrics.pooled_pixels.iou * 100).toFixed(1)}%.
       The scores below are from a training scene, so they overstate real accuracy.
+      The held-out split is by tile, not by event: all test chips share flood events with the
+      training chips, so this number is likely optimistic as well.
     </div>` : ""}
 
     <div

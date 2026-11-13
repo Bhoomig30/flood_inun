@@ -299,7 +299,11 @@
         <li><strong>12-feature spatial inundation model</strong> — Random Forest scene classifier for
           flood extent on Sentinel-1 tiles (threshold 0.65, tuned on the validation split), evaluated
           on a held-out tile split: pooled pixel IoU 0.754 / F1 0.860; mean per-tile IoU 0.533. Results
-          are in <code>data/ai_flood/test_set_metrics.json</code> and shown in the SAR Analysis tab.</li>
+          are in <code>data/ai_flood/test_set_metrics.json</code> and shown in the SAR Analysis tab.
+          <strong>Split caveat:</strong> the split is by tile, not by event or location. All 67 test
+          chips come from the same 11 Sentinel-1 flood events as the training chips (36 sit within
+          10 km of a training chip), so these scores are likely optimistic and should be read as an
+          upper bound until an event-held-out evaluation is run.</li>
       </ol>
       <div id="aiml-model-content">
         <p class="muted small">Loading trained-model metrics…</p>
