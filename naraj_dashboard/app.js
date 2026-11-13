@@ -874,11 +874,21 @@ async function loadFloodForecast() {
 
     var overallRisk = data.overall_risk || "LOW";
     var studyRegion = data.study_region || "Naraj / Cuttack, Odisha (model study region)";
-    var observationTime =
-      data.reference_time || "Latest available historical observation";
     var observed = data.observed || {};
     var cone = data.forecast_cone || [];
-    var mlEnabled = data.ml_enabled === true;
+    var headlineSource =
+      data.headline_source || (data.ml_enabled === true ? "rf_model" : "legacy_engine");
+    var isRfHeadline = headlineSource === "rf_model";
+    var mlAsOf =
+      data.ml_result && data.ml_result.as_of
+        ? String(data.ml_result.as_of).slice(0, 16).replace("T", " ")
+        : null;
+    // The legacy engine's result is reported beside the headline, never inside it.
+    var legacyEngine = data.legacy_engine || null;
+    var legacyStem =
+      legacyEngine && legacyEngine.reference_time
+        ? String(legacyEngine.reference_time).slice(0, 16).replace("T", " ")
+        : "2022-08-31 00:00";
 
     function forecastItem(key) {
       var forecast = data.forecast[key] || {};
@@ -888,24 +898,21 @@ async function loadFloodForecast() {
           : 0
       );
       var risk = forecast.risk || "LOW";
-      var mlP =
-        forecast.ml_probability_percent !== undefined
-          ? Number(forecast.ml_probability_percent)
+      var engineItem = legacyEngine && legacyEngine.forecast
+        ? legacyEngine.forecast[key]
+        : null;
+      var engineP =
+        engineItem && engineItem.flood_probability_percent !== undefined
+          ? Number(engineItem.flood_probability_percent)
           : null;
 
       var mlBadge = "";
-      if (mlEnabled && mlP !== null) {
-        var mlWeight =
-          forecast.ml_weight !== undefined ? Number(forecast.ml_weight) : 0.4;
-        var statApprox =
-          mlWeight < 1
-            ? (probability - mlWeight * mlP) / (1 - mlWeight)
-            : probability;
+      if (isRfHeadline && engineP !== null) {
         mlBadge =
-          '<span class="forecast-ml-badge" title="Random Forest model: ' +
-          mlP.toFixed(1) + "% (weight " + (mlWeight * 100).toFixed(0) +
-          "%) · statistical engine: " + statApprox.toFixed(1) + '%">' +
-          "RF " + mlP.toFixed(0) + "%</span>";
+          '<span class="forecast-ml-badge" title="Legacy statistical engine, observation basis ' +
+          escapeHtml(legacyStem) +
+          '" — not included in the headline">engine ' +
+          engineP.toFixed(1) + "%</span>";
       }
 
       return (
@@ -937,13 +944,15 @@ async function loadFloodForecast() {
     var maxProbability = Math.max.apply(null, probabilities);
 
     if (statusEl) {
+      // The amber replay banner carries the "not a live forecast" warning, so
+      // the status line only names the source and generation time.
       statusEl.textContent =
-        (mlEnabled
-          ? "Historical-data AI forecast (statistical engine + Random Forest ensemble) — "
-          : "Historical-data AI forecast (statistical engine) — ") +
-        "generated " +
+        (isRfHeadline
+          ? "Random Forest headline (dataset row " + (mlAsOf || "latest") + " UTC)"
+          : "Legacy statistical engine only (no ML model for this station)") +
+        " — generated " +
         escapeHtml(String(data.generated_at || "").replace("T", " ").slice(0, 16)) +
-        " UTC from real CWC records. Not a live government flood warning.";
+        " UTC from real CWC records.";
     }
 
     var locationEl = document.getElementById("forecast-location");
@@ -970,14 +979,14 @@ async function loadFloodForecast() {
 
     var mlNote = document.getElementById("forecast-ml-note");
     if (mlNote) {
-      if (data.ml_enabled === true) {
-        mlNote.textContent = "RF ensemble active";
+      if (isRfHeadline) {
+        mlNote.textContent = "RF headline";
         mlNote.className = "forecast-ml-note on";
       } else if (data.ml_capable === false) {
-        mlNote.textContent = "statistical engine";
+        mlNote.textContent = "legacy engine (no ML for this station)";
         mlNote.className = "forecast-ml-note off";
       } else {
-        mlNote.textContent = "RF unavailable";
+        mlNote.textContent = "RF unavailable — legacy engine";
         mlNote.className = "forecast-ml-note off";
       }
     }
@@ -992,8 +1001,33 @@ async function loadFloodForecast() {
     var overallDetails = document.getElementById("overall-risk-details");
     if (overallDetails) {
       overallDetails.textContent =
-        "Highest predicted probability: " + maxProbability.toFixed(1) +
-        "% across the 6h, 12h and 24h forecasts (study-station output).";
+        (isRfHeadline
+          ? "Highest RF probability: "
+          : "Highest legacy-engine probability: ") +
+        maxProbability.toFixed(1) +
+        "% across the 6h, 12h and 24h horizons (study-station output).";
+    }
+
+    // Historical-replay banner: everything on this card comes from a record
+    // that stops in the past, so say so instead of implying a live forecast.
+    var replayEl = document.getElementById("forecast-replay-note");
+    if (replayEl) {
+      var endStamp =
+        data.observation_freshness && data.observation_freshness.latest_observation
+          ? String(data.observation_freshness.latest_observation)
+              .slice(0, 16)
+              .replace("T", " ")
+          : null;
+      if (endStamp) {
+        replayEl.hidden = false;
+        replayEl.innerHTML =
+          "<strong>Historical replay — not a live forecast.</strong> Every value " +
+          "on this card replays the CWC record, which ends at <strong>" +
+          escapeHtml(endStamp) + " UTC</strong>. No observation after that date " +
+          "exists in this deployment, so this is not a current flood risk.";
+      } else {
+        replayEl.hidden = true;
+      }
     }
 
     if (grid) {
@@ -1001,6 +1035,30 @@ async function loadFloodForecast() {
         forecastItem("6h") +
         forecastItem("12h") +
         forecastItem("24h");
+    }
+
+    // Persistence indicator: latest dataset row vs the flood threshold.
+    var persistEl = document.getElementById("forecast-persistence");
+    if (persistEl) {
+      var persist = data.persistence || null;
+      // The persistence check is Naraj-specific (the served dataset models
+      // Naraj); don't show it next to a different station's headline.
+      if (persist && persist.available && data.station_key === "naraj") {
+        persistEl.hidden = false;
+        persistEl.innerHTML =
+          "<strong>Persistence check (latest dataset row):</strong> Naraj " +
+          Number(persist.level_m).toFixed(2) + " m at " +
+          escapeHtml(String(persist.level_as_of).slice(0, 16)) + " UTC vs the " +
+          Number(persist.threshold_m).toFixed(2) + " m flood threshold — " +
+          (persist.above_threshold
+            ? "<strong>at or above threshold</strong>"
+            : "<strong>" + Math.abs(Number(persist.margin_m)).toFixed(2) +
+              " m below it</strong>") +
+          '. <span class="muted">Level from the dataset\'s last row; threshold ' +
+          "from hf_forecast_baseline.json.</span>";
+      } else {
+        persistEl.hidden = true;
+      }
     }
 
     var observationEl = document.getElementById("forecast-observation");
@@ -1025,38 +1083,57 @@ async function loadFloodForecast() {
           : '<span class="freshness-badge is-fresh">Latest observation ' +
             escapeHtml(obsStamp) + " UTC (" + escapeHtml(ageLabel) + ")</span> ";
       }
-      // The components resolve "latest observation" from different sources:
-      // the statistical engine from its Aug-2022 hourly series, the RF from
-      // the dataset's last row. Label both rather than implying one anchor.
-      var anchors = data.forecast_anchors || null;
-      var mlStamp =
-        anchors && anchors.ml_as_of
-          ? String(anchors.ml_as_of).slice(0, 16).replace("T", " ")
-          : null;
-      var obsHtml = freshHtml + "<strong>" + escapeHtml(stationLabel) +
-        " · Observation basis:</strong> engine " +
-        escapeHtml(observationTime.slice(0, 16).replace("T", " ")) + " UTC";
-      if (mlStamp) {
-        obsHtml += " · ML input row " + escapeHtml(mlStamp) + " UTC";
-        if (anchors.anchors_aligned === false) {
-          obsHtml +=
-            ' <span class="muted">(components use different anchors)</span>';
+      // Headline basis first; the legacy engine's own basis is named as
+      // excluded so nobody reads the 2022 river level as the current one.
+      var obsHtml =
+        freshHtml + "<strong>" + escapeHtml(stationLabel) + " · Headline:</strong> ";
+      if (isRfHeadline) {
+        obsHtml += "Random Forest, input row " +
+          escapeHtml(mlAsOf || "—") + " UTC";
+        obsHtml +=
+          ' · <span class="muted">legacy engine basis ' +
+          escapeHtml(legacyStem) +
+          " UTC, excluded from the headline</span>";
+      } else {
+        obsHtml +=
+          "legacy statistical engine, observation basis " +
+          escapeHtml(legacyStem) +
+          " UTC — no ML model is served for this station";
+      }
+      // The engine's observed level is an Aug-2022 value, so it stays in the
+      // legacy block rather than sitting next to the current ML headline.
+      observationEl.innerHTML = obsHtml;
+
+      // Legacy engine detail, in its own block — never in the headline.
+      var legacyEl = document.getElementById("forecast-legacy-engine");
+      if (legacyEl) {
+        if (isRfHeadline && legacyEngine && legacyEngine.forecast) {
+          var legacyParts = horizons
+            .map(function (h) {
+              var item = legacyEngine.forecast[h] || {};
+              var p = Number(item.flood_probability_percent);
+              return h + " " + (Number.isFinite(p) ? p.toFixed(1) : "—") + "%";
+            })
+            .join(" · ");
+          var legacyLevel =
+            legacyEngine.observed && Number(legacyEngine.observed.water_level_m);
+          legacyEl.hidden = false;
+          legacyEl.innerHTML =
+            "<strong>Legacy engine (observation basis " +
+            escapeHtml(legacyStem) +
+            " UTC, not part of the headline):</strong> " +
+            escapeHtml(legacyParts) +
+            (Number.isFinite(legacyLevel)
+              ? " · engine observed river level " + legacyLevel.toFixed(2) + " m"
+              : "") +
+            " · " +
+            escapeHtml(
+              "rule-based rise/level/seasonal engine, kept for comparison only"
+            );
+        } else {
+          legacyEl.hidden = true;
         }
       }
-      if (typeof observed.water_level_m === "number") {
-        obsHtml += " · River level " + observed.water_level_m.toFixed(2) + " m";
-        obsHtml += " (" + observed.monsoon_percentile + "th monsoon percentile)";
-      }
-      if (typeof observed.rise_6h_m === "number") {
-        obsHtml += " · Rise 6h " +
-          (observed.rise_6h_m >= 0 ? "+" : "") + observed.rise_6h_m.toFixed(2) +
-          " m / 12h " +
-          (observed.rise_12h_m >= 0 ? "+" : "") + observed.rise_12h_m.toFixed(2) +
-          " m / 24h " +
-          (observed.rise_24h_m >= 0 ? "+" : "") + observed.rise_24h_m.toFixed(2) +
-          " m";
-      }
-      observationEl.innerHTML = obsHtml;
 
       renderForecastCone(cone, observed, currentForecastStation);
     }

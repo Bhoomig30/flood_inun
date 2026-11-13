@@ -164,23 +164,40 @@ anchor silently. `GET /api/health` exposes the same report under
 | --- | --- |
 | `GET /api/location?latitude=..&longitude=..` | Nearest real CWC rainfall + river stations with `distance_km`, latest observations, `no_nearby_station` status when nothing is within radius (300 km rainfall / 400 km river), plus `model_scope` |
 | `GET /api/stations/india_cwc?q=&type=rainfall\|river&state=&latitude=&longitude=&limit=` | India-wide registry with filters + distance sort |
-| `GET /api/forecast?station=naraj\|alipingal\|nimapara` | 6/12/24h ensemble (statistical engine + RF for Naraj), honest scope labels |
+| `GET /api/forecast?station=naraj\|alipingal\|nimapara` | 6/12/24h forecast; headline = RF for Naraj, legacy engine reported separately |
 | `GET /api/model/info` | Training metadata, HF/GitHub provenance, holdout skill |
 | `GET /api/stations/india?q=&basin=&state=` | Curated river-gauge registry (basin explorer) |
 | `GET /api/levels/recent?station=`, `/api/forecast/backtest`, `/api/health` | Chart series, causal evaluation, health |
 
-### Forecast anchors
+### Headline, legacy engine and anchors
 
-`/api/forecast` reports two as-of moments in `forecast_anchors`, because the two
-components read different sources. The RF (`ml_result.as_of`) is anchored to the
-last row of `data/hf/forecast_dataset.csv`; the statistical engine
-(`reference_time`, from its Aug-2022 hourly file) cannot move past
-`calibration.hourly_end` without hourly history. While those differ,
-`anchors_aligned` is `false`, `ensemble_mixes_anchors` is `true`, and the blended
-`flood_probability_percent` combines the two moments — the card labels both.
-`observation_freshness.latest_observation` is the newest of the two (the ML row
-when the bridge is active) and its age is reported against a 48 h threshold.
-An explicit `?reference_time=` still pins both components, for back-testing.
+The reported probability is **not a blend**. For Naraj it is the Random Forest
+alone, anchored to the last row of `data/hf/forecast_dataset.csv`
+(2025-12-30 23:00), and `headline_source` is `rf_model`. The statistical engine
+is still computed and returned under `legacy_engine` — labelled *legacy engine,
+observation basis 2022-08-31* — with its own per-horizon probabilities, risk
+bands and observed level. It is never added to the headline.
+
+`forecast_anchors` still describes both moments: `ml_as_of`,
+`statistical_engine_reference_time` (which cannot move past
+`calibration.hourly_end` without hourly history), `anchors_aligned: false`, and
+`ensemble_mixes_anchors: false` (the headline is single-source).
+`observation_freshness.latest_observation` is the RF's row and its age is
+reported against a 48 h threshold.
+
+Stations the RF does not serve (Alipingal, Nimapara) keep the engine as the
+headline and report `headline_source: "legacy_engine"`, so the card never
+presents an engine value as model output for a station without a model.
+
+`persistence` carries the check shown beside the ML probability: the latest
+`naraj_water_level_m` from the dataset's final row against the flood threshold
+recorded in `hf_forecast_baseline.json` (`label.threshold_m`). Both numbers are
+read from those files; nothing is hard-coded.
+
+**Follow-up that would allow re-blending:** extend the engine's hourly water
+level history past Aug-2022 (`data/cwc/*_august2022_hourly.json`). Until then the
+engine's anchor is three years older than the RF's and the two must stay
+separate. An explicit `?reference_time=` still pins both, for back-testing.
 
 ## Key files
 
@@ -200,8 +217,9 @@ An explicit `?reference_time=` still pins both components, for back-testing.
 - Station markers from the previous location removed before each new render
 - Flood Map: study-region layers built but OFF by default; AI-scene button and
   layer toggles re-enable them; stale event layers cleared on event change
-- Forecast card: real RF ensemble output, honest "Historical-data AI forecast …
-  not a live government flood warning" status, scope message per location
+- Forecast card: RF headline with a historical-replay banner, separate legacy
+  engine block, persistence check, present-condition status and scope message
+  per location
 - India Stations pane: 842/842 real stations, type/state filters, distance sort
 - Research view: 6 tabs, 18 map layers, 4-step evolution timeline, station
   charts, validation metrics, confidence grid — zero page errors

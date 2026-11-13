@@ -55,6 +55,15 @@ is written.
 **Decision required from you:** which access route (CWC portal login, India-WRIS
 API key, a manual periodic export, or a paid data vendor).
 
+**Why this item now matters twice:** the dashboard headline is the Random Forest
+anchored to the dataset's last row, and the statistical engine is reported
+separately under `legacy_engine` because its hourly history stops at
+2022-08-31. **Extending the engine's hourly water-level history is the follow-up
+that would allow re-blending** the two components on a shared, current anchor.
+Until hourly records past 2022-08-31 exist (from the same CWC source), any blend
+would mix a three-year-old river state with the RF's current row, which is why
+the headline is single-source today.
+
 ---
 
 ## 2. Models for stations other than Naraj

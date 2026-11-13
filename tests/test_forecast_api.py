@@ -13,6 +13,10 @@ Covers:
   4. forecast anchor    - the ML layer is anchored to the dataset's LAST row
                           (read from the CSV, not hard-coded), freshness agrees,
                           and the anchor cannot silently regress to 2022-08-31
+  5. headline           - the reported probability IS the RF probability; the
+                          legacy engine is reported separately, never blended
+  6. persistence        - latest dataset level vs the baseline threshold, both
+                          read from the files
 
 The API tests start their own server on a free port and shut it down afterwards;
 nothing external is contacted.
@@ -64,6 +68,25 @@ def dataset_latest_timestamp():
     if not stamps:
         raise AssertionError(f"no timestamps in {DATASET}")
     return max(stamps)
+
+
+def dataset_last_row():
+    """Final row of the dataset, parsed without loading the whole 24 MB file."""
+    with DATASET.open("rb") as fh:
+        fh.seek(0, os.SEEK_END)
+        size = fh.tell()
+        fh.seek(max(0, size - 65536))
+        chunk = fh.read().decode("utf-8", "replace")
+    lines = [line for line in chunk.split("\n") if line.strip()]
+    with DATASET.open(newline="", encoding="utf-8") as fh:
+        header = next(csv.reader(fh))
+    values = next(csv.reader([lines[-1].rstrip("\r")]))
+    return dict(zip(header, values))
+
+
+def baseline_threshold():
+    payload = json.loads((MODEL_DIR / "hf_forecast_baseline.json").read_text(encoding="utf-8"))
+    return float(payload["label"]["threshold_m"])
 
 
 class ModelLoadingTests(unittest.TestCase):
@@ -240,7 +263,79 @@ class ForecastApiTests(unittest.TestCase):
         self.assertGreaterEqual(int((ml_as_of or "0")[:4]), 2025)
         self.assertEqual(hour_key(anchors.get("statistical_engine_reference_time")), "2022-08-31 00:00")
         self.assertFalse(anchors.get("anchors_aligned"))
-        self.assertTrue(anchors.get("ensemble_mixes_anchors"))
+        # The headline no longer mixes the two moments, so this stays false.
+        self.assertFalse(anchors.get("ensemble_mixes_anchors"))
+        self.assertEqual(anchors.get("headline_source"), "rf_model")
+
+    # -- headline = RF only; legacy engine stays separate -------------------
+
+    def test_headline_probability_is_the_ml_probability(self):
+        body = self.forecast_with_ml()
+        self.assertEqual(body.get("headline_source"), "rf_model")
+        for h in HORIZONS:
+            with self.subTest(horizon=h):
+                item = body["forecast"][h]
+                self.assertIn("ml_probability_percent", item)
+                self.assertAlmostEqual(
+                    float(item["flood_probability_percent"]),
+                    float(item["ml_probability_percent"]),
+                    places=6,
+                    msg="headline is not the RF probability",
+                )
+                # risk band comes from the headline value, not the old blend
+                expected = "HIGH" if item["flood_probability_percent"] >= 75 else (
+                    "MODERATE" if item["flood_probability_percent"] >= 25 else "LOW"
+                )
+                self.assertEqual(item["risk"], expected)
+                self.assertNotIn("ml_weight", item)
+
+    def test_legacy_engine_present_and_separate(self):
+        body = self.forecast_with_ml()
+        legacy = body.get("legacy_engine")
+        self.assertIsInstance(legacy, dict, "legacy_engine block missing")
+        self.assertIn("2022-08-31", legacy.get("label", ""))
+        self.assertIn("not part of the headline", legacy.get("note", ""))
+        self.assertEqual(hour_key(legacy.get("reference_time")), "2022-08-31 00:00")
+        for h in HORIZONS:
+            with self.subTest(horizon=h):
+                item = legacy["forecast"][h]
+                self.assertIn("flood_probability_percent", item)
+                self.assertGreaterEqual(float(item["flood_probability_percent"]), 0.0)
+                self.assertLessEqual(float(item["flood_probability_percent"]), 100.0)
+        # the engine result is NOT what the headline reports
+        self.assertGreaterEqual(len(legacy["forecast"]), 3)
+
+    def test_legacy_headline_for_station_without_ml(self):
+        """Stations the RF does not serve keep the engine headline, labelled."""
+        _, body = http_json(
+            f"http://127.0.0.1:{self.port}/api/forecast?station=nimapara"
+        )
+        self.assertEqual(body.get("status"), "success", str(body)[:300])
+        self.assertEqual(body.get("headline_source"), "legacy_engine")
+        self.assertFalse(body.get("ml_enabled"))
+        self.assertIn("legacy_engine", body)
+        self.assertEqual(
+            body["forecast_anchors"].get("headline_source"), "legacy_engine"
+        )
+
+    # -- persistence indicator ----------------------------------------------
+
+    def test_persistence_indicator_uses_dataset_and_baseline_files(self):
+        body = self.forecast_with_ml()
+        persist = body.get("persistence") or {}
+        self.assertTrue(persist.get("available"), f"persistence unavailable: {persist}")
+        row = dataset_last_row()
+        self.assertAlmostEqual(
+            float(persist["level_m"]), float(row["naraj_water_level_m"]), places=6
+        )
+        self.assertEqual(hour_key(persist["level_as_of"]), hour_key(row["timestamp"]))
+        self.assertAlmostEqual(
+            float(persist["threshold_m"]), baseline_threshold(), places=6
+        )
+        self.assertEqual(
+            bool(persist["above_threshold"]),
+            float(row["naraj_water_level_m"]) >= baseline_threshold(),
+        )
 
 
 if __name__ == "__main__":

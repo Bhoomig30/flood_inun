@@ -218,6 +218,38 @@
     font-weight: 600;
 }
 
+.forecast-replay-note {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-left: 4px solid #b8860b;
+    border-radius: 6px;
+    background: #fdf6e3;
+    color: #6b4e00;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.forecast-persistence {
+    margin-top: 12px;
+    padding: 9px 12px;
+    border: 1px solid #dfe5ea;
+    border-radius: 8px;
+    background: #f8fafb;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.forecast-legacy-engine {
+    margin-top: 10px;
+    padding: 9px 12px;
+    border-left: 3px solid #9aa7b1;
+    border-radius: 6px;
+    background: #f4f6f8;
+    color: #4a5560;
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+
 .forecast-location {
     margin-top: 8px;
     font-size: 13px;
@@ -1023,6 +1055,13 @@
         </div>
 
 
+        <div
+            id="forecast-replay-note"
+            class="forecast-replay-note"
+            hidden
+        ></div>
+
+
         <!-- STATION PICKER -->
 
         <div class="forecast-station-row">
@@ -1115,8 +1154,22 @@
 
 
         <div
+            id="forecast-persistence"
+            class="forecast-persistence"
+            hidden
+        ></div>
+
+
+        <div
             id="forecast-observation"
             class="forecast-observation"
+        ></div>
+
+
+        <div
+            id="forecast-legacy-engine"
+            class="forecast-legacy-engine"
+            hidden
         ></div>
 
 
@@ -1131,7 +1184,9 @@
                 </strong>
 
                 <span class="forecast-cone-note">
-                    Shaded band = projected range; dashed line = flood-signal level
+                    Shaded band = projected range; dashed line = flood-signal level.
+                    Built from the legacy engine's Aug-2022 hourly series, not from
+                    the headline observation.
                 </span>
 
             </div>

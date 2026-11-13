@@ -122,6 +122,75 @@ function anchorKey(value) {
   return `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}`;
 }
 
+// Same value, rendered for humans/labels ("2022-08-31 00:00").
+function anchorLabel(value) {
+  const key = anchorKey(value);
+  return key ? key.replace("T", " ") : null;
+}
+
+// Latest row of the served dataset, used for the persistence indicator. Reads
+// only the header and the tail of the CSV instead of loading the ~24 MB file.
+let lastDatasetRowCache = null;
+function datasetLastRow() {
+  if (lastDatasetRowCache) return lastDatasetRowCache;
+  const file = path.join(__dirname, "data", "hf", "forecast_dataset.csv");
+  let fd = null;
+  try {
+    const size = fs.statSync(file).size;
+    fd = fs.openSync(file, "r");
+    const headBuf = Buffer.alloc(Math.min(8192, size));
+    fs.readSync(fd, headBuf, 0, headBuf.length, 0);
+    const header = headBuf.toString("utf8").split("\n")[0].replace(/\r$/, "").split(",");
+    const tailLen = Math.min(65536, size);
+    const tailBuf = Buffer.alloc(tailLen);
+    fs.readSync(fd, tailBuf, 0, tailLen, size - tailLen);
+    const lines = tailBuf.toString("utf8").split("\n").filter((l) => l.trim().length > 0);
+    const values = lines[lines.length - 1].replace(/\r$/, "").split(",");
+    const levelIdx = header.indexOf("naraj_water_level_m");
+    if (levelIdx < 0) throw new Error("naraj_water_level_m column not found");
+    lastDatasetRowCache = {
+      timestamp: values[0],
+      naraj_water_level_m: Number(values[levelIdx]),
+    };
+    return lastDatasetRowCache;
+  } catch (err) {
+    return null;
+  } finally {
+    if (fd !== null) {
+      try {
+        fs.closeSync(fd);
+      } catch (e) {
+        /* ignore */
+      }
+    }
+  }
+}
+
+// Persistence check shown next to the ML probability: current Naraj level from
+// the dataset's last row against the flood threshold the baseline used
+// (hf_forecast_baseline.json -> label.threshold_m). Both are read from files.
+function persistenceIndicator() {
+  const info = modelInfo();
+  const chain = info.baseline_skill && info.baseline_skill.label;
+  const threshold = chain ? Number(chain.threshold_m) : NaN;
+  const row = datasetLastRow();
+  if (!row || !Number.isFinite(row.naraj_water_level_m) || !Number.isFinite(threshold)) {
+    return { available: false, reason: "dataset row or baseline threshold unavailable" };
+  }
+  const level = row.naraj_water_level_m;
+  return {
+    available: true,
+    station: "Naraj",
+    level_m: level,
+    level_as_of: row.timestamp,
+    threshold_m: threshold,
+    above_threshold: level >= threshold,
+    margin_m: Math.round((level - threshold) * 100) / 100,
+    level_source: "data/hf/forecast_dataset.csv (last row, naraj_water_level_m)",
+    threshold_source: "data/ml_models/hf_forecast_baseline.json (label.threshold_m)",
+  };
+}
+
 function sendJSON(res, status, data) {
   const body = JSON.stringify(data);
   res.writeHead(status, {
@@ -323,52 +392,58 @@ async function handleRequest(req, res) {
 
     const result = predictor.predict(referenceTime, stationKey);
 
-    // Attach ML ensemble output when the bridge is available.
-    // The pooled Random Forests are SERVED through the Naraj feature
-    // pipeline (ml_serve.py TARGET), so the ML component is only blended
-    // for Naraj — other stations get the statistical engine, honestly
-    // labelled, rather than a misattributed ML probability.
+    // HEADLINE = Random Forest only. The old 60/40 blend mixed an engine
+    // anchored to Aug-2022 with an RF anchored to the dataset's last row, so
+    // the number did not describe either moment. The engine's own result is
+    // preserved verbatim under `legacy_engine` (see below) and never enters
+    // the headline. The pooled RFs are SERVED through the Naraj feature
+    // pipeline, so only Naraj can have an RF headline; other stations keep
+    // the engine headline, explicitly labelled `headline_source`.
     const mlCapableStation = !stationKey || stationByKey(stationKey).key === "naraj";
     if (result.status === "success") {
+      // Snapshot the engine result BEFORE it is replaced, so the legacy path
+      // stays available and clearly separable in the response.
+      const legacyLabelBasis = anchorLabel(result.reference_time) || "unknown";
+      const legacyEngine = {
+        label: "legacy engine, observation basis " + legacyLabelBasis,
+        reference_time: result.reference_time,
+        overall_risk: result.overall_risk,
+        forecast: JSON.parse(JSON.stringify(result.forecast)),
+        observed: JSON.parse(JSON.stringify(result.observed || {})),
+        calibration_reference: result.calibration || null,
+        note:
+          "Rule-based rise/level/seasonal engine anchored to its Aug-2022 " +
+          "hourly CWC series. Reported for comparison only; it is not part " +
+          "of the headline probability.",
+      };
+
       result.ml = mlBridge.status();
       result.ml_capable = mlCapableStation;
+      result.headline_source = "legacy_engine";
       if (mlBridge.status().available && mlCapableStation) {
-        // The ML model must be anchored to the newest observation in the
-        // system, which is the served dataset's last row (hf/forecast_dataset
-        // .csv, ends 2025-12-30). It used to be pinned to the statistical
-        // engine's reference_time, but the engine's hourly calibration file
-        // only covers Aug-2022, so the RF was predicting from a row more than
-        // three years older than the data it was trained on. An explicit
-        // ?reference_time= (back-testing) still wins; null means "latest row".
+        // The ML model is anchored to the newest observation in the system,
+        // which is the served dataset's last row (hf/forecast_dataset.csv,
+        // ends 2025-12-30). An explicit ?reference_time= (back-testing) still
+        // wins; null means "latest row".
         const mlRef =
           referenceTime || mlBridge.status().dataset_end || null;
         const ml = await mlBridge.predict(mlRef);
         if (ml.ok && ml.horizons) {
           result.ml_enabled = true;
           result.ml_result = { as_of: ml.as_of, horizons: ml.horizons };
+          result.headline_source = "rf_model";
           for (const h of ["6h", "12h", "24h"]) {
             const mlP01 =
               ml.horizons[h] && Number.isFinite(ml.horizons[h].probability)
                 ? ml.horizons[h].probability
                 : null;
             if (mlP01 !== null && result.forecast[h]) {
-              // Ensemble: 60% statistical engine (level/percentile physics,
-              // recession-aware) + 40% calibrated Random Forest trained on
-              // the real 2021-2025 CWC dataset (22 flood events, 5 monsoons).
-              // The v3 RF has a measured 0.3-0.5% mean false-alarm rate on
-              // safe holdout hours, so no recession discount is needed.
               const mlP = Math.round(mlP01 * 10000) / 100; // -> percent, 2dp
-              const mlWeight = 0.4;
-              const blended =
-                (1 - mlWeight) * result.forecast[h].flood_probability_percent +
-                mlWeight * mlP;
+              // Headline probability and band are the RF alone. The engine's
+              // numbers stay in legacy_engine.forecast[h].
               result.forecast[h].ml_probability_percent = mlP;
-              result.forecast[h].ml_weight = mlWeight;
-              result.forecast[h].flood_probability_percent =
-                Math.round(blended * 100) / 100;
-              result.forecast[h].risk = predictor.riskBand(
-                result.forecast[h].flood_probability_percent
-              );
+              result.forecast[h].flood_probability_percent = mlP;
+              result.forecast[h].risk = predictor.riskBand(mlP);
             }
           }
           const probs = ["6h", "12h", "24h"].map(
@@ -377,13 +452,14 @@ async function handleRequest(req, res) {
           result.overall_risk = predictor.riskBand(Math.max(...probs));
         }
       }
+      result.legacy_engine = legacyEngine;
+      result.persistence = persistenceIndicator();
     }
 
-    // ANCHORS: the statistical engine and the Random Forest resolve "latest
+    // ANCHORS: the headline (RF) and the legacy engine resolve "latest
     // observation" from different sources — the engine from its Aug-2022
     // hourly calibration file, the RF from the served dataset's last row
-    // (2025-12-30). Label both instead of presenting one timestamp as if it
-    // described the whole response.
+    // (2025-12-30). Label both; only the RF feeds the headline now.
     const engineAnchor = result.reference_time || null;
     const mlAsOf = (result.ml_result && result.ml_result.as_of) || null;
     const latestObs = mlAsOf || engineAnchor;
@@ -397,11 +473,18 @@ async function handleRequest(req, res) {
           (result.calibration && result.calibration.hourly_end) || null,
         ml_as_of: mlAsOf,
         anchors_aligned: aligned,
-        ensemble_mixes_anchors: !!mlAsOf && !!engineAnchor && !aligned,
+        headline_source: result.headline_source || "legacy_engine",
+        // Kept as a stable field: the headline is single-source, so no
+        // long/short-horizon moment mixing happens in the reported number.
+        ensemble_mixes_anchors: false,
         note:
-          "The ML model is anchored to the latest row of the served dataset; " +
-          "the statistical engine is anchored to the end of its hourly CWC " +
-          "series (Aug-2022 only). Blended percentages combine those moments.",
+          result.headline_source === "rf_model"
+            ? "The headline probability comes from the RF model, anchored to " +
+              "the dataset's latest row. The statistical engine (Aug-2022 " +
+              "basis) is reported separately under legacy_engine and is not " +
+              "blended into the headline."
+            : "No ML model is served for this station, so the headline is the " +
+              "legacy statistical engine (Aug-2022 basis), labelled as such.",
       };
     }
 
