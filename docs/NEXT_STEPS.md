@@ -64,6 +64,41 @@ Until hourly records past 2022-08-31 exist (from the same CWC source), any blend
 would mix a three-year-old river state with the RF's current row, which is why
 the headline is single-source today.
 
+### Why the in-repo CSV cannot supply the engine's hourly history (investigated 2026-11-13)
+
+The obvious shortcut — point the engine at `data/hf/forecast_dataset.csv` — was
+investigated and rejected. The engine needs, per station, an hourly series of
+`{timestamp, water_level_m}` (it derives `rise_6/12/24h`, `trend_3h`, the
+forecast cone and the per-horizon `max_rise` calibration from it), plus the
+daily series it already has.
+
+What the CSV actually contains for `naraj_water_level_m`:
+
+| Check | Result |
+| --- | --- |
+| Rows / range | 43,800 rows, 2021-01-01 00:00 → 2025-12-30 23:00, hourly index, no duplicates, no missing hours |
+| Nulls | 0 |
+| Distinct values per day | **exactly 1 on all 1,825 days** |
+| Unchanged consecutive hours | 42,420 of 43,799 (longest plateau 215 h) |
+
+So the column is a **daily series broadcast to an hourly index**, not hourly
+observations. Feeding it to the engine would make every sub-daily rise
+zero except at the daily step and would recompute `max_rise` from daily steps —
+a silent modelling change, not a data reuse.
+
+The genuine hourly source is `rwl_manual_hr_cwc_005_2021_2025.csv`, named in
+`data_sources.json` ("21,257 observations for Naraj", ≈48% of the hours) and in
+the `source` field of `data/cwc/*.json`. **That file is not in the repository**
+(no `*rwl*` or `*manual_hr*` file anywhere on disk, tracked or ignored), and its
+partial coverage means gaps could only be filled by guessing. The only genuinely
+hourly files present are `data/cwc/{naraj,alipingal,nimapara}_august2022_hourly.json`
+(721 records each; Naraj has 347 distinct values and 535 hour-to-hour changes).
+
+**Outcome:** not implemented. Removing the 2022 anchor needs either the original
+hourly export or live hourly ingestion (item above). When that exists, the
+engine can rebuild its hourly series per station; tests would then assert its
+`reference_time` reaches 2025-12-30 23:00 while the RF headline is unchanged.
+
 ---
 
 ## 2. Models for stations other than Naraj
