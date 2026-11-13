@@ -20,6 +20,15 @@ stations, 1970–2025), built directly from the real CWC CSVs hosted with the
 project's dataset (Hugging Face: `bhoomig0630/flood-inundation-upload`,
 `ml/data/external/...`). No stations invented, no values imputed. Rebuild with:
 
+The Overview map plots all 842 stations (clustered by zoom) and labels each
+with what the project can actually do for it: **1** station has an ML forecast
+(Naraj), **2** have a verified water-level series served by the legacy engine
+(Naraj, Alipingal, Nimapara), and the other **839** are metadata + real
+observations only — `/api/forecast` refuses them rather than reusing another
+station's model. Search and the state filter narrow the markers; selecting any
+station recentres every map and rewrites the location panels. Details in
+`README_FORECASTING.md` → "Capability tiers".
+
 ```bash
 python3 scripts/build_india_registry.py --src ml/data/external
 ```

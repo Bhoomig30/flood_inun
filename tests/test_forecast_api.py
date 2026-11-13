@@ -335,6 +335,75 @@ class ForecastApiTests(unittest.TestCase):
             body["forecast_anchors"].get("headline_source"), "legacy_engine"
         )
 
+    # -- capability tiers ----------------------------------------------------
+
+    def test_registry_exposes_forecast_tiers(self):
+        """Every registry row must declare what this project can do for it."""
+        _, body = http_json(
+            f"http://127.0.0.1:{self.port}/api/stations/india_cwc?limit=2000"
+        )
+        self.assertEqual(body.get("status"), "success", str(body)[:300])
+        stations = body["stations"]
+        self.assertGreater(len(stations), 800, "registry unexpectedly small")
+        tiers = {}
+        for s in stations:
+            tiers[s.get("forecast_tier")] = tiers.get(s.get("forecast_tier"), 0) + 1
+            self.assertIn("data_status", s)
+            self.assertIsInstance(s.get("has_ml_model"), bool)
+        # exactly the three verified-series stations are above tier 3
+        self.assertEqual(tiers.get(1), 1, tiers)
+        self.assertEqual(tiers.get(2), 2, tiers)
+        self.assertEqual(tiers.get(3), len(stations) - 3, tiers)
+        naraj = [s for s in stations if s["station"] == "Naraj"]
+        self.assertEqual(len(naraj), 1)
+        self.assertTrue(naraj[0]["has_ml_model"])
+        self.assertEqual(naraj[0]["forecast_station_key"], "naraj")
+
+    def test_forecast_reports_its_tier(self):
+        """Naraj is the only station with the RF headline (tier 1)."""
+        body = self.forecast_with_ml()
+        self.assertEqual(body.get("forecast_tier"), 1)
+        self.assertIn("ML forecast", body.get("forecast_tier_label", ""))
+        _, legacy = http_json(
+            f"http://127.0.0.1:{self.port}/api/forecast?station=alipingal"
+        )
+        self.assertEqual(legacy.get("status"), "success", str(legacy)[:300])
+        self.assertEqual(legacy.get("forecast_tier"), 2)
+        self.assertEqual(legacy.get("headline_source"), "legacy_engine")
+        self.assertFalse(legacy.get("ml_enabled"))
+
+    def test_tier3_station_gets_no_forecast_numbers(self):
+        """A real registry station outside the verified set must be refused."""
+        _, body = http_json(
+            f"http://127.0.0.1:{self.port}/api/forecast"
+            "?station=Aalo_1&state=Arunachal%20Pradesh"
+        )
+        self.assertEqual(body.get("status"), "station_not_supported", str(body)[:300])
+        self.assertEqual(body.get("forecast_tier"), 3)
+        self.assertIsNone(body.get("forecast"), "must not borrow another station's forecast")
+        self.assertFalse(body.get("ml_enabled"))
+        self.assertTrue(body.get("reason"))
+        self.assertEqual(body["station"].get("name"), "Aalo_1")
+        self.assertNotIn("probabilities", body)
+
+    def test_unknown_station_is_refused(self):
+        _, body = http_json(
+            f"http://127.0.0.1:{self.port}/api/forecast?station=NotAStation999"
+        )
+        self.assertEqual(body.get("status"), "unknown_station", str(body)[:300])
+        self.assertIsNone(body.get("forecast"))
+        self.assertTrue(body.get("reason"))
+
+    def test_levels_recent_refuses_unverified_station(self):
+        _, body = http_json(
+            f"http://127.0.0.1:{self.port}/api/levels/recent"
+            "?station=Aalo_1&state=Arunachal%20Pradesh"
+        )
+        self.assertFalse(body.get("available"))
+        self.assertEqual(body.get("timestamps"), [])
+        self.assertEqual(body.get("levels"), [])
+        self.assertTrue(body.get("reason"))
+
     # -- persistence indicator ----------------------------------------------
 
     def test_persistence_indicator_uses_dataset_and_baseline_files(self):

@@ -165,11 +165,39 @@ anchor silently. `GET /api/health` exposes the same report under
 | Endpoint | Purpose |
 | --- | --- |
 | `GET /api/location?latitude=..&longitude=..` | Nearest real CWC rainfall + river stations with `distance_km`, latest observations, `no_nearby_station` status when nothing is within radius (300 km rainfall / 400 km river), plus `model_scope` |
-| `GET /api/stations/india_cwc?q=&type=rainfall\|river&state=&latitude=&longitude=&limit=` | India-wide registry with filters + distance sort |
-| `GET /api/forecast?station=naraj\|alipingal\|nimapara` | 6/12/24h forecast; headline = RF for Naraj, legacy engine reported separately |
+| `GET /api/stations/india_cwc?q=&type=rainfall\|river&state=&latitude=&longitude=&limit=` | India-wide registry with filters + distance sort, each row carrying `forecast_tier`, `has_ml_model`, `has_verified_series`, `forecast_station_key` |
+| `GET /api/forecast?station=..&state=..` | 6/12/24h forecast; headline = RF for Naraj, legacy engine for Alipingal/Nimapara; any other registry station returns an explicit `station_not_supported` refusal with no numbers |
 | `GET /api/model/info` | Training metadata, HF/GitHub provenance, holdout skill |
 | `GET /api/stations/india?q=&basin=&state=` | Curated river-gauge registry (basin explorer) |
 | `GET /api/levels/recent?station=`, `/api/forecast/backtest`, `/api/health` | Chart series, causal evaluation, health |
+
+### Capability tiers (measured, 2026-11-13)
+
+Not every station in the 842-station registry has a model, and the dashboard
+says which tier each one is in instead of implying uniform coverage:
+
+| Tier | Stations (measured) | What the dashboard shows |
+| --- | --- | --- |
+| 1 — ML forecast | **1** (Naraj) | Random Forest headline probability for 6/12/24 h + persistence replay |
+| 2 — Observations + legacy engine | **2** (Alipingal, Nimapara) | legacy statistical engine probabilities, clearly labelled `headline_source: legacy_engine` |
+| 3 — Station metadata only | **839** | registry metadata, coordinates, river/basin/district and any real rainfall or discharge observation — **no probabilities at all** |
+
+Tiering is enforced server-side, not just hidden in the UI: `/api/forecast`,
+`/api/forecast/export` and `/api/levels/recent` resolve the requested station
+name against the registry and refuse (`station_not_supported` / `unknown_station`)
+anything outside the verified set, so another station's numbers can never be
+returned by accident. `/api/stations/india_cwc` exposes the tier for every row,
+which is what the map colours and the station picker use.
+
+The national view shows all 842 stations as markers (clustered by zoom), with
+search across station/river/district/state and a state filter. Selecting any
+station recentres every map and drives the location panels; the forecast card
+then renders either the station's real tier output or the explicit refusal with
+its metadata.
+
+What is **not** available today: trained models or verified hourly water-level
+series for any station outside those three. No per-station probability is
+estimated, interpolated or borrowed for tier-3 stations.
 
 ### Headline, legacy engine and anchors
 

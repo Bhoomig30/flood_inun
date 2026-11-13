@@ -191,6 +191,122 @@ function persistenceIndicator() {
   };
 }
 
+// ---------------------------------------------------------------------------
+// FORECAST CAPABILITY TIERS
+//   1 = trained RF headline (Naraj only)
+//   2 = verified water-level series served by the legacy engine
+//       (Naraj, Alipingal, Nimapara)
+//   3 = registry metadata and rainfall observations only — NO probabilities
+// Nothing outside the verified set may produce a forecast value.
+// ---------------------------------------------------------------------------
+const ML_MODEL_STATIONS = new Set(["naraj"]);
+const VERIFIED_SERIES_STATIONS = new Set(["naraj", "alipingal", "nimapara"]);
+
+function tierForStationKey(stationKey) {
+  const key = String(stationKey || "").trim().toLowerCase();
+  if (ML_MODEL_STATIONS.has(key)) return 1;
+  if (VERIFIED_SERIES_STATIONS.has(key)) return 2;
+  return 3;
+}
+
+function tierLabel(tier) {
+  if (tier === 1) return "ML forecast";
+  if (tier === 2) return "Observations + legacy engine";
+  return "Station metadata only";
+}
+
+// Registry stations that correspond to a verified water-level series.
+function verifiedKeyForName(name) {
+  const n = String(name || "").trim().toLowerCase();
+  return VERIFIED_SERIES_STATIONS.has(n) ? n : null;
+}
+
+function findRegistryStation(name, state) {
+  if (!name) return null;
+  let reg = { stations: [] };
+  try {
+    reg = locationService.loadRegistry();
+  } catch (err) {
+    return null;
+  }
+  const target = String(name).trim().toLowerCase();
+  const matches = (reg.stations || []).filter(
+    (s) => String(s.station || "").trim().toLowerCase() === target
+  );
+  if (!matches.length) return null;
+  if (state) {
+    const sameState = matches.filter(
+      (s) => String(s.state || "").toLowerCase() === String(state).toLowerCase()
+    );
+    if (sameState.length) return sameState[0];
+  }
+  return matches[0];
+}
+
+function stationSummary(s) {
+  if (!s) return null;
+  return {
+    name: s.station,
+    state: s.state || null,
+    district: s.district || null,
+    river: s.river || null,
+    kind: s.kind || null,
+    latitude: s.latitude,
+    longitude: s.longitude,
+    n_obs: s.n_obs,
+    latest_observation: s.latest_observation || null,
+  };
+}
+
+// Resolve a `station` query param to a verified forecast key, or return a
+// refusal payload so callers never receive another station's numbers.
+function resolveForecastStation(stationParam, stateParam) {
+  if (!stationParam) {
+    return { key: "naraj", tier: 1, registry: findRegistryStation("Naraj", "Odisha") };
+  }
+  const direct = String(stationParam).trim().toLowerCase();
+  if (VERIFIED_SERIES_STATIONS.has(direct)) {
+    return { key: direct, tier: tierForStationKey(direct), registry: null };
+  }
+  const reg = findRegistryStation(stationParam, stateParam);
+  if (reg) {
+    const key = verifiedKeyForName(reg.station);
+    if (key) return { key, tier: tierForStationKey(key), registry: reg };
+    return { key: null, tier: 3, registry: reg };
+  }
+  return { key: null, tier: null, registry: null };
+}
+
+function unsupportedStationPayload(resolved) {
+  if (!resolved.registry) {
+    return {
+      status: "unknown_station",
+      forecast: null,
+      forecast_tier: null,
+      reason:
+        "Station is not in the CWC registry used by this project, so no " +
+        "observation or forecast can be shown.",
+    };
+  }
+  return {
+    status: "station_not_supported",
+    forecast: null,
+    forecast_tier: 3,
+    forecast_tier_label: tierLabel(3),
+    station: stationSummary(resolved.registry),
+    ml_enabled: false,
+    reason:
+      "No verified hourly water-level series or trained forecast model " +
+      "exists for this station in this project.",
+    scope_note:
+      "Forecasts are served for Naraj (trained Random Forest) and " +
+      "Alipingal/Nimapara (verified series, legacy engine only).",
+    warning:
+      "This project does not invent probabilities for stations it was not " +
+      "trained or verified on.",
+  };
+}
+
 function sendJSON(res, status, data) {
   const body = JSON.stringify(data);
   res.writeHead(status, {
@@ -271,12 +387,15 @@ async function handleRequest(req, res) {
     try {
       const reg = locationService.loadRegistry();
       if (reg && Array.isArray(reg.stations) && reg.stations.length) {
-        const counts = (reg.meta && reg.meta.counts) || {};
+        const counts = reg.counts || (reg.meta && reg.meta.counts) || {};
         registryStatus = {
           loaded: true,
           stations: counts.total || reg.stations.length,
-          states: counts.states || 0,
-          generated_at: (reg.meta && reg.meta.generated_at) || null,
+          states:
+            counts.states ||
+            (Array.isArray(reg.states) ? reg.states.length : 0),
+          generated_at:
+            reg.generated_at || (reg.meta && reg.meta.generated_at) || null,
         };
       }
     } catch (err) { /* registry optional — reported as not loaded */ }
@@ -405,7 +524,16 @@ async function handleRequest(req, res) {
       }
     }
 
-    const result = predictor.predict(referenceTime, stationKey);
+    // TIER GATE: only stations with a verified series may return numbers.
+    // The engine's stationByKey() defaults unknown keys to Naraj, so this
+    // check must happen before predict() — otherwise any registry station
+    // would silently receive Naraj's forecast.
+    const resolved = resolveForecastStation(stationKey, parsed.searchParams.get("state"));
+    if (!resolved.key) {
+      return sendJSON(res, 200, unsupportedStationPayload(resolved));
+    }
+    const forecastKey = resolved.key;
+    const result = predictor.predict(referenceTime, forecastKey);
 
     // HEADLINE = Random Forest only. The old 60/40 blend mixed an engine
     // anchored to Aug-2022 with an RF anchored to the dataset's last row, so
@@ -414,7 +542,10 @@ async function handleRequest(req, res) {
     // the headline. The pooled RFs are SERVED through the Naraj feature
     // pipeline, so only Naraj can have an RF headline; other stations keep
     // the engine headline, explicitly labelled `headline_source`.
-    const mlCapableStation = !stationKey || stationByKey(stationKey).key === "naraj";
+    result.forecast_tier = resolved.tier;
+    result.forecast_tier_label = tierLabel(resolved.tier);
+    if (resolved.registry) result.registry_station = stationSummary(resolved.registry);
+    const mlCapableStation = forecastKey === "naraj";
     if (result.status === "success") {
       // Snapshot the engine result BEFORE it is replaced, so the legacy path
       // stays available and clearly separable in the response.
@@ -583,13 +714,26 @@ async function handleRequest(req, res) {
   if (pathname === "/api/levels/recent") {
     predictor.load();
     const stationKey = parsed.searchParams.get("station");
-    const def = stationDef(stationKey);
+    const levelsResolved = resolveForecastStation(stationKey, parsed.searchParams.get("state"));
+    if (!levelsResolved.key) {
+      return sendJSON(res, 200, {
+        available: false,
+        timestamps: [],
+        levels: [],
+        station: levelsResolved.registry ? stationSummary(levelsResolved.registry) : null,
+        reason: levelsResolved.registry
+          ? "No verified hourly water-level series exists for this station in this project."
+          : "Station is not in the CWC registry used by this project.",
+      });
+    }
+    const def = stationDef(levelsResolved.key);
     const st = predictor.loaded ? predictor.stations[def.key] : null;
     if (!st) {
-      return sendJSON(res, 200, { timestamps: [], levels: [] });
+      return sendJSON(res, 200, { available: false, timestamps: [], levels: [] });
     }
     const hr = st.hourly.slice(-72);
     return sendJSON(res, 200, {
+      available: true,
       station: def.name,
       station_key: def.key,
       monsoon_p95_m: Number(st.calibration.monsoon_p95_m.toFixed(2)),
@@ -612,7 +756,13 @@ async function handleRequest(req, res) {
     const referenceTime = parsed.searchParams.get("reference_time");
     const stationKey = parsed.searchParams.get("station");
     const format = (parsed.searchParams.get("format") || "json").toLowerCase();
-    const result = predictor.predict(referenceTime, stationKey);
+    const exportResolved = resolveForecastStation(stationKey, parsed.searchParams.get("state"));
+    if (!exportResolved.key) {
+      return sendJSON(res, 200, unsupportedStationPayload(exportResolved));
+    }
+    const result = predictor.predict(referenceTime, exportResolved.key);
+    result.forecast_tier = exportResolved.tier;
+    result.forecast_tier_label = tierLabel(exportResolved.tier);
 
     if (format === "csv") {
       const rows = [
@@ -772,7 +922,17 @@ async function handleRequest(req, res) {
           .toLowerCase();
         if (!hay.includes(q)) continue;
       }
-      const row = Object.assign({}, s, { has_observation: !!s.latest_observation });
+      const forecastKey = verifiedKeyForName(s.station);
+      const tier = forecastKey ? tierForStationKey(forecastKey) : 3;
+      const row = Object.assign({}, s, {
+        has_observation: !!s.latest_observation,
+        forecast_tier: tier,
+        forecast_tier_label: tierLabel(tier),
+        has_ml_model: forecastKey === "naraj",
+        has_verified_series: !!forecastKey,
+        forecast_station_key: forecastKey,
+        data_status: tierLabel(tier),
+      });
       if (useDist) {
         row.distance_km =
           Math.round(haversineKm(lat, lon, s.latitude, s.longitude) * 100) / 100;
