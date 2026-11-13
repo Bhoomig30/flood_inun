@@ -1332,8 +1332,11 @@ async function initFloodMap() {
       layer:
         () => layerRegistry.ndem,
 
+      // The NDEM layer is built but NOT added to the map on load (neutral
+      // India-wide default), so the checkbox must start unchecked or it
+      // claims a visible layer that isn't there.
       checked:
-        true
+        false
     }
 
   ];
@@ -1380,6 +1383,9 @@ async function initFloodMap() {
               : d.layer;
 
           if (!layer) {
+            // No layer exists for this event (e.g. the checked layer has no
+            // digitized extent) — don't leave the box claiming it is shown.
+            cb.checked = false;
             return;
           }
 
