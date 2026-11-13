@@ -130,8 +130,10 @@ python tests/test_forecast_api.py -v
 `scripts/ingest_cwc.py` pulls the newest CWC observations, appends the new
 records to `data/cwc/<station>_daily_2021_2025.json` (history is never
 rewritten), rebuilds the 71-feature frame and appends only rows newer than the
-served dataset, then writes `data/cwc/ingestion_status.json`. The ML service
-reloads the frame on change, so no restart is needed.
+served dataset, then writes `data/cwc/ingestion_status.json` (a gitignored run
+snapshot — see `data/cwc/ingestion_status.example.json`; without it `/api/health`
+reports `status: "not_run"` rather than guessing). The ML service reloads the
+frame on change, so no restart is needed.
 
 ```bash
 python3 scripts/ingest_cwc.py --once --dry-run          # parse + report, change nothing

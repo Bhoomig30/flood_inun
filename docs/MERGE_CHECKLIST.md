@@ -19,7 +19,7 @@ audit.**
 | --- | --- |
 | `.gitignore` | adds `.cache/` and `artifacts/` |
 | `scripts/ingest_cwc.py` | **new**, 465 lines: scheduled CWC ingestion (`--once`, `--watch`, `--dry-run`, `--levels-csv`, `--rain-csv`) |
-| `naraj_dashboard/data/cwc/ingestion_status.json` | **new**, 45 lines: output of one real run |
+| `naraj_dashboard/data/cwc/ingestion_status.json` | output of one real run — **no longer tracked** (see below) |
 | `naraj_dashboard/ml_serve.py` | dataset hot-reload when the feature frame changes |
 | `naraj_dashboard/server.js` | `/api/health` gains `data_freshness` read from `ingestion_status.json` |
 | `package.json` | `ingest:cwc` and `ingest:cwc:watch` scripts |
@@ -28,11 +28,14 @@ Review result:
 - **No credentials, API keys, tokens or passwords.** Pattern scan over the whole
   branch diff found none. The only URL is the public Hugging Face dataset.
 - **No personal data.** No e-mail addresses in the diff.
-- **One machine-specific path is committed**: `rainfall_staged_to` inside
-  `ingestion_status.json` is
-  `/workspace/chats/17d9417fae274b2673052267/ml/data/external/...`. Not a secret,
-  but it is meaningless on any other machine and should not be relied on.
-  Flagged, not deleted.
+- **RESOLVED (branch `audit/india-wide`, commit "Untrack the ingestion run
+  snapshot")**: the committed file carried a machine-specific
+  `/workspace/.../rainfall_staged_to` path. It is now gitignored, removed from
+  the index with `git rm --cached`, and replaced by
+  `data/cwc/ingestion_status.example.json` with the same structure and
+  placeholder values. `/api/health` reports `status: "not_run"`,
+  `message: "no ingestion run yet"` and `stale: null` when the file is absent,
+  instead of inventing a freshness verdict; `scripts/ingest_cwc.py` still runs.
 - The ingestion script is **functional, not a stub** (stdlib only: `argparse`,
   `csv`, `json`, `shutil`, `subprocess`, `urllib`; no third-party imports). It
   fails honestly when no water-level source is supplied and records
@@ -119,10 +122,8 @@ not (and untick itself when no extent exists for the selected event).
 
 ## Owner checks before merging
 
-- [ ] Decide whether `naraj_dashboard/data/cwc/ingestion_status.json` stays
-      tracked. It contains the local absolute path `rainfall_staged_to` and a
-      stale run timestamp. Options: regenerate before release, strip the path in
-      the script, or gitignore the file and commit an example.
+- [x] ~~Decide whether `ingestion_status.json` stays tracked.~~ Done: gitignored
+      with an example committed; `/api/health` reports `not_run` when absent.
 - [ ] Decide the model-artifact question: regenerate the `.pkl` bundles on the
       `FrozenEstimator` path (metrics identical on 1.7.2, pickled objects differ),
       or keep the current bundles and the `<1.8` pin.

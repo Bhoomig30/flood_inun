@@ -294,24 +294,39 @@ async function handleRequest(req, res) {
       datasetStatus.data_notice = locationLookup(20.5, 85.95).data_notice;
     } catch (err) { /* non-fatal */ }
     // Ingestion health: never present an old anchor as current observations.
+    // The status file is a gitignored run snapshot, so a fresh clone has none.
+    // In that case report "no ingestion run yet" and leave freshness unknown
+    // instead of inventing a stale/current verdict.
     let dataFreshness = { status: "not_run" };
+    let ingest = null;
     try {
-      const ingest = JSON.parse(
+      ingest = JSON.parse(
         fs.readFileSync(path.join(__dirname, "data", "cwc", "ingestion_status.json"), "utf8")
       );
+    } catch (err) {
+      ingest = null;
+    }
+    if (ingest) {
       dataFreshness = {
+        status: ingest.status === "example" ? "example" : "reported",
         latest_observation: ingest.latest_observation || null,
         age_days: ingest.age_days === undefined ? null : ingest.age_days,
-        stale: ingest.stale === true,
+        stale: typeof ingest.stale === "boolean" ? ingest.stale : null,
         stale_after_days: ingest.stale_after_days,
         last_ingestion_utc: ingest.last_run_utc || null,
         water_levels_source: ingest.source ? ingest.source.water_levels : null,
         blockers: Array.isArray(ingest.blockers) ? ingest.blockers : [],
       };
-    } catch (err) {
+    } else {
       dataFreshness = {
         status: "not_run",
-        hint: "run python3 scripts/ingest_cwc.py --once to refresh CWC observations",
+        message: "no ingestion run yet",
+        latest_observation: null,
+        age_days: null,
+        stale: null,
+        hint:
+          "run python3 scripts/ingest_cwc.py --once to refresh CWC observations; " +
+          "see data/cwc/ingestion_status.example.json for the report shape",
       };
     }
     return sendJSON(res, 200, {

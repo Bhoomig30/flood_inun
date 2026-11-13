@@ -40,6 +40,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 MODEL_DIR = ROOT / "naraj_dashboard" / "data" / "ml_models"
 DATASET = ROOT / "naraj_dashboard" / "data" / "hf" / "forecast_dataset.csv"
+INGEST_STATUS = ROOT / "naraj_dashboard" / "data" / "cwc" / "ingestion_status.json"
 HORIZONS = ("6h", "12h", "24h")
 
 
@@ -212,6 +213,22 @@ class ForecastApiTests(unittest.TestCase):
         self.assertEqual(fresh.get("threshold_hours"), 48)
         if fresh.get("age_hours") is not None:
             self.assertEqual(fresh["stale"], fresh["age_hours"] > 48)
+
+    def test_health_reports_ingestion_state_without_inventing_freshness(self):
+        """The status file is a gitignored run snapshot: absent in a fresh clone."""
+        status, body = http_json(f"http://127.0.0.1:{self.port}/api/health")
+        self.assertEqual(status, 200)
+        fresh = body.get("data_freshness")
+        self.assertIsInstance(fresh, dict, "data_freshness missing from /api/health")
+        if INGEST_STATUS.exists():
+            self.assertIn(fresh.get("status"), {"reported", "example"})
+            self.assertIn("latest_observation", fresh)
+            self.assertIn(fresh.get("stale"), {True, False, None})
+        else:
+            self.assertEqual(fresh.get("status"), "not_run")
+            self.assertEqual(fresh.get("message"), "no ingestion run yet")
+            self.assertIsNone(fresh.get("latest_observation"))
+            self.assertIsNone(fresh.get("stale"), "must not invent a stale verdict")
 
     # -- forecast anchor regression guards ---------------------------------
 
