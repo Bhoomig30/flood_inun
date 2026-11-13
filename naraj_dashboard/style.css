@@ -977,6 +977,21 @@ body {
   overflow: hidden;
   box-shadow: var(--shadow-xs);
 }
+
+/* Compact metrics table: fits the narrow research-page column */
+.aiml-metrics-wrap {
+  overflow-x: auto;
+  margin: 8px 0;
+}
+.aiml-metrics {
+  font-size: 10.5px;
+  margin: 0;
+}
+.aiml-metrics th,
+.aiml-metrics td {
+  padding: 3px 4px;
+  white-space: nowrap;
+}
 .model-skill-table th {
   background: rgba(11, 51, 80, 0.05);
 }

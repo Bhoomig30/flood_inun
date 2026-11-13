@@ -66,6 +66,78 @@ python3 scripts/build_india_registry.py --src ml/data/external
 # (downloads layout also supported; see --help)
 ```
 
+## Models
+
+The dashboard's forecast bundles live in `naraj_dashboard/data/ml_models/`:
+`hf_forecast_6h.pkl`, `hf_forecast_12h.pkl`, `hf_forecast_24h.pkl`, plus
+`hf_forecast_metadata.json`. They were built with **scikit-learn 1.7.x**, so keep
+the `>=1.3,<1.8` pin in `requirements.txt` — pickling/unpickling across a major
+minor boundary is not guaranteed, and `ml_train.py` uses an API that 1.8+ removed.
+Retrain with `python naraj_dashboard/ml_train.py` (reads the tracked
+`naraj_dashboard/data/hf/forecast_dataset.csv`).
+
+**Current state of this repo:** those three `.pkl` files **are tracked in git**
+(`git ls-files | grep pkl` lists them), so a fresh clone already has them. They were
+added with `git add -f` because `.gitignore` excludes `*.pkl` — meaning any bundle
+you regenerate is **ignored by git** and will not show up as a change unless you
+force-add it again.
+
+If the bundles are missing or need regenerating:
+
+```bash
+# 1) Train from the dataset that ships with the repo
+#    (naraj_dashboard/data/hf/forecast_dataset.csv, tracked, 43,800 rows)
+pip install -r requirements.txt
+python naraj_dashboard/ml_train.py      # writes the 3 bundles + metadata
+
+# 2) Or download the Hugging Face copies
+pip install huggingface_hub             # not in requirements.txt
+python ml/hf_data.py download --pattern "ml/data/models/*"
+```
+
+Downloading from Hugging Face fetches `ml/data/models/flood_forecast_{6,12,24}h.pkl`
+(and their imputers) — the older bundle path, *not* the `hf_forecast_*.pkl` files
+this dashboard loads, so you still need `ml_train.py` for a working dashboard.
+The same folder also holds the large spatial models
+(`random_forest_flood.pkl` 1.8 GB, `random_forest_flood_12features.pkl` 2.9 GB).
+A download of everything is several GB; use `--pattern` to narrow it.
+
+`requirements.txt` pins `scikit-learn>=1.3,<1.8` because `ml_train.py` uses
+`CalibratedClassifierCV(cv="prefit")`, which scikit-learn 1.8+ removed.
+
+### Scheduled CWC ingestion (keep the forecast anchor current)
+
+`scripts/ingest_cwc.py` pulls the newest CWC observations, appends the new
+records to `data/cwc/<station>_daily_2021_2025.json` (history is never
+rewritten), rebuilds the 71-feature frame and appends only rows newer than the
+served dataset, then writes `data/cwc/ingestion_status.json`. The ML service
+reloads the frame on change, so no restart is needed.
+
+```bash
+python3 scripts/ingest_cwc.py --once --dry-run          # parse + report, change nothing
+python3 scripts/ingest_cwc.py --once --levels-csv <path-or-url>
+python3 scripts/ingest_cwc.py --watch --interval-minutes 360
+npm run ingest:cwc                                      # same as --once
+```
+
+Cron example (every 6 hours):
+
+```cron
+0 */6 * * * cd /path/to/flood_inun && .venv/bin/python scripts/ingest_cwc.py --once >> artifacts/ingest.log 2>&1
+```
+
+Sources and limits:
+
+| Input | Where it comes from |
+| --- | --- |
+| Hourly rainfall | `--rain-csv` (default: Odisha 2021-2025 export from the Hugging Face dataset, cached 6 h) |
+| Hourly water levels | `--levels-csv` only — the CWC manual hourly water-level export is **not** in the Hugging Face dataset |
+
+If no newer water-level export is supplied, the run completes, refreshes
+rainfall, and reports `stale: true` with the blocker instead of reusing an old
+anchor silently. `GET /api/health` exposes the same report under
+`data_freshness` (`latest_observation`, `age_days`, `stale`, `blockers`).
+
 ## API
 
 | Endpoint | Purpose |

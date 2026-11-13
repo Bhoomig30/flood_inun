@@ -817,6 +817,94 @@ async function initTerrain() {
 }
 
 // ---------------------------------------------------------------------------
+// Trained-model panel (reads the same metadata the API serves)
+// ---------------------------------------------------------------------------
+
+function fmtMetric(value, digits) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n.toFixed(digits) : "—";
+}
+
+async function renderAimlModelPanel() {
+  const host = document.getElementById("aiml-model-content");
+  if (!host) return;
+
+  let info = null;
+  try {
+    info = await loadJSON("/api/model/info");
+  } catch (e) {
+    info = null;
+  }
+
+  if (!info || info.status !== "trained") {
+    host.innerHTML = `<p class="muted">Trained bundles are not available in this deployment. Train them with
+      <code>python3 naraj_dashboard/ml_train.py</code> using the real dataset, then reload.</p>`;
+    return;
+  }
+
+  const ds = info.dataset || {};
+  const meta = [
+    `<strong>Model:</strong> ${esc(info.model_type || "RandomForestClassifier + calibration")} (v${esc(info.version)})`,
+    `<strong>Trained:</strong> ${esc((info.trained_at || "").slice(0, 10))}`,
+    `<strong>Dataset:</strong> ${esc(ds.rows == null ? "—" : Number(ds.rows).toLocaleString())} hourly rows, ${esc(ds.features)} features, ${esc(ds.start)} → ${esc(ds.end)}`,
+    `<strong>Label:</strong> ${esc(info.label_rule || "")}`,
+    `<strong>Split:</strong> ${esc((info.splits || {}).method || "chronological")} 70/15/15 — metrics below are the untouched holdout`,
+  ];
+
+  const horizons = info.horizons || {};
+  const keys = Object.keys(horizons);
+  let rows = "";
+  let testRows = null;
+  let valRows = null;
+  for (const key of keys) {
+    const h = horizons[key] || {};
+    const test = h.test || {};
+    if (test.rows != null) testRows = Number(test.rows).toLocaleString();
+    if ((h.validation || {}).rows != null) valRows = Number((h.validation || {}).rows).toLocaleString();
+    rows += `<tr>
+      <td><strong>${esc(key)}</strong></td>
+      <td>${fmtMetric(test.brier, 4)}</td>
+      <td>${fmtMetric(test.roc_auc, 3)}</td>
+      <td>${fmtMetric(test.pr_auc, 3)}</td>
+      <td>${fmtMetric(test.precision, 3)}</td>
+      <td>${fmtMetric(test.recall, 3)}</td>
+      <td>${fmtMetric(test.f1, 3)}</td>
+    </tr>`;
+  }
+
+  const featureSets = keys.map((key) =>
+    ((horizons[key] || {}).top_features || []).slice(0, 3).map((f) => f.feature).join(", ")
+  );
+  const sameFeatures = featureSets.length > 1 && featureSets.every((f) => f && f === featureSets[0]);
+  const topFeatures = sameFeatures
+    ? `<ul class="muted small" style="margin:0 0 8px 18px;"><li><strong>All horizons:</strong> ${esc(featureSets[0])}</li></ul>`
+    : `<ul class="muted small" style="margin:0 0 8px 18px;">${keys
+        .map((key, i) => (featureSets[i] ? `<li><strong>${esc(key)}</strong>: ${esc(featureSets[i])}</li>` : ""))
+        .join("")}</ul>`;
+
+  const notes = (info.notes || []).map((n) => `<li>${esc(n)}</li>`).join("");
+  const bridge = info.ml_bridge || {};
+
+  host.innerHTML = `
+    <ul class="muted small" style="margin:0 0 10px 18px;">${meta.map((m) => `<li>${m}</li>`).join("")}</ul>
+    <div class="aiml-metrics-wrap">
+      <table class="model-skill-table aiml-metrics">
+        <thead><tr>
+          <th>Horizon</th><th>Brier</th><th>ROC-AUC</th><th>PR-AUC</th>
+          <th>Precision</th><th>Recall</th><th>F1</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <p class="muted small">Holdout scores${testRows ? ` on ${testRows} test rows` : ""}${valRows ? ` (${valRows} validation rows used for calibration)` : ""}.
+      Brier is the calibrated probability error (lower is better); ROC-AUC/PR-AUC measure ranking skill
+      on a period the models never saw. Precision is high because the target is a rare event — read it
+      together with recall, which is lower.</p>
+    ${topFeatures ? `<p class="muted small"><strong>Strongest features</strong> (the model leans on recent Naraj water levels):</p><ul class="muted small" style="margin:0 0 8px 18px;">${topFeatures}</ul>` : ""}
+    ${notes ? `<p class="muted small"><strong>Training notes</strong></p><ul class="muted small" style="margin:0 0 4px 18px;">${notes}</ul>` : ""}
+    <p class="muted small">ML bridge: ${bridge.available ? `connected, dataset ends ${esc(bridge.dataset_end)}` : "not connected in this session"}.</p>`;
+}
+
 // Model panel (temporal forecast scope — honest labeling)
 // ---------------------------------------------------------------------------
 
@@ -887,6 +975,7 @@ async function bootResearch() {
   await step("panels", renderAnalysisPanels);
   await step("terrain", initTerrain);
   await step("model-scope", renderModelScopePanel);
+  await step("aiml-model", renderAimlModelPanel);
 
   if (failures.length) {
     console.warn("Research view loaded with degraded sections:", failures.join(" | "));
