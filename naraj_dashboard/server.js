@@ -112,6 +112,16 @@ const MIME = {
   ".woff2": "font/woff2",
 };
 
+// Comparable key for a timestamp regardless of whether it is ISO ("2022-08-31
+// T00:00:00.000Z") or pandas-style ("2025-12-30 23:00:00"). Hour resolution is
+// enough to decide whether two forecast components share an anchor.
+function anchorKey(value) {
+  if (!value) return null;
+  const m = String(value).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
+  if (!m) return null;
+  return `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}`;
+}
+
 function sendJSON(res, status, data) {
   const body = JSON.stringify(data);
   res.writeHead(status, {
@@ -323,12 +333,15 @@ async function handleRequest(req, res) {
       result.ml = mlBridge.status();
       result.ml_capable = mlCapableStation;
       if (mlBridge.status().available && mlCapableStation) {
-        // Align the ML component to the SAME as-of moment as the statistical
-        // engine (result.reference_time) so the ensemble never mixes moments —
-        // e.g. live mode serves the engine's latest verified observation
-        // (2022-08-31), and the ML row for that exact hour is used, not a
-        // later row from the 2021-2025 dataset.
-        const mlRef = referenceTime || result.reference_time || null;
+        // The ML model must be anchored to the newest observation in the
+        // system, which is the served dataset's last row (hf/forecast_dataset
+        // .csv, ends 2025-12-30). It used to be pinned to the statistical
+        // engine's reference_time, but the engine's hourly calibration file
+        // only covers Aug-2022, so the RF was predicting from a row more than
+        // three years older than the data it was trained on. An explicit
+        // ?reference_time= (back-testing) still wins; null means "latest row".
+        const mlRef =
+          referenceTime || mlBridge.status().dataset_end || null;
         const ml = await mlBridge.predict(mlRef);
         if (ml.ok && ml.horizons) {
           result.ml_enabled = true;
@@ -366,9 +379,35 @@ async function handleRequest(req, res) {
       }
     }
 
+    // ANCHORS: the statistical engine and the Random Forest resolve "latest
+    // observation" from different sources — the engine from its Aug-2022
+    // hourly calibration file, the RF from the served dataset's last row
+    // (2025-12-30). Label both instead of presenting one timestamp as if it
+    // described the whole response.
+    const engineAnchor = result.reference_time || null;
+    const mlAsOf = (result.ml_result && result.ml_result.as_of) || null;
+    const latestObs = mlAsOf || engineAnchor;
+    const aligned = anchorKey(engineAnchor) === anchorKey(mlAsOf);
+    if (result.status === "success") {
+      result.forecast_anchors = {
+        latest_observation: latestObs,
+        latest_observation_source: mlAsOf ? "ml_dataset" : "statistical_engine",
+        statistical_engine_reference_time: engineAnchor,
+        statistical_engine_hourly_end:
+          (result.calibration && result.calibration.hourly_end) || null,
+        ml_as_of: mlAsOf,
+        anchors_aligned: aligned,
+        ensemble_mixes_anchors: !!mlAsOf && !!engineAnchor && !aligned,
+        note:
+          "The ML model is anchored to the latest row of the served dataset; " +
+          "the statistical engine is anchored to the end of its hourly CWC " +
+          "series (Aug-2022 only). Blended percentages combine those moments.",
+      };
+    }
+
     // How old is the observation this forecast is anchored to? The cache/series
     // end in the past, so surface that instead of letting the card imply "now".
-    const obsTime = result.reference_time || (result.ml_result && result.ml_result.as_of) || null;
+    const obsTime = latestObs;
     const STALE_AFTER_HOURS = 48;
     let ageHours = null;
     if (obsTime) {
@@ -377,12 +416,17 @@ async function handleRequest(req, res) {
     }
     result.observation_freshness = {
       latest_observation: obsTime,
+      latest_observation_source: mlAsOf ? "ml_dataset" : "statistical_engine",
       age_hours: ageHours,
       age_days: ageHours === null ? null : Math.round((ageHours / 24) * 10) / 10,
       threshold_hours: STALE_AFTER_HOURS,
       stale: ageHours === null ? true : ageHours > STALE_AFTER_HOURS,
       note:
-        "Forecast anchored to the latest observation available in the CWC series, not to the current time.",
+        mlAsOf
+          ? "Age of the newest observation the forecast uses (the ML dataset's " +
+            "latest row), not the current time."
+          : "Age of the newest observation the forecast uses (the statistical " +
+            "engine's hourly series ends here), not the current time.",
     };
 
     return sendJSON(res, 200, result);

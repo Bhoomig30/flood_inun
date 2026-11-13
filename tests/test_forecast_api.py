@@ -10,6 +10,9 @@ Covers:
   1. model loading      - each bundle opens and predicts a probability in [0, 1]
   2. API response shape - /api/forecast returns the documented structure
   3. probability bounds - every horizon (and the ML layer) stays within range
+  4. forecast anchor    - the ML layer is anchored to the dataset's LAST row
+                          (read from the CSV, not hard-coded), freshness agrees,
+                          and the anchor cannot silently regress to 2022-08-31
 
 The API tests start their own server on a free port and shut it down afterwards;
 nothing external is contacted.
@@ -17,6 +20,7 @@ nothing external is contacted.
 
 from __future__ import annotations
 
+import csv
 import json
 import os
 import signal
@@ -44,6 +48,22 @@ def free_port() -> int:
 def http_json(url, timeout=20):
     with urllib.request.urlopen(url, timeout=timeout) as resp:
         return resp.status, json.loads(resp.read().decode("utf-8"))
+
+
+def hour_key(value):
+    """Normalise an ISO or pandas-style timestamp to 'YYYY-MM-DD HH:MM'."""
+    if not value:
+        return None
+    return str(value).strip().replace("T", " ")[:16]
+
+
+def dataset_latest_timestamp():
+    """Newest timestamp in the served dataset (fixed-width, so max() is safe)."""
+    with DATASET.open(newline="", encoding="utf-8") as fh:
+        stamps = [row["timestamp"] for row in csv.DictReader(fh) if row.get("timestamp")]
+    if not stamps:
+        raise AssertionError(f"no timestamps in {DATASET}")
+    return max(stamps)
 
 
 class ModelLoadingTests(unittest.TestCase):
@@ -169,6 +189,58 @@ class ForecastApiTests(unittest.TestCase):
         self.assertEqual(fresh.get("threshold_hours"), 48)
         if fresh.get("age_hours") is not None:
             self.assertEqual(fresh["stale"], fresh["age_hours"] > 48)
+
+    # -- forecast anchor regression guards ---------------------------------
+
+    def forecast_with_ml(self, timeout=90):
+        """Forecast response, waiting for the ml_serve.py warm-up to finish.
+
+        The server answers /api/health before the ML subprocess has loaded its
+        pickles, so a single early request would legitimately have no ML layer.
+        """
+        deadline = time.time() + timeout
+        last = None
+        while time.time() < deadline:
+            _, body = http_json(f"http://127.0.0.1:{self.port}/api/forecast?station=naraj")
+            last = body
+            if (body.get("ml_result") or {}).get("as_of"):
+                return body
+            time.sleep(1.0)
+        self.fail(f"ML bridge never became ready: {str((last or {}).get('ml'))[:300]}")
+
+    def test_ml_as_of_equals_dataset_latest_row(self):
+        """The ML layer must predict from the newest row the dataset contains."""
+        body = self.forecast_with_ml()
+        ml = body.get("ml_result") or {}
+        self.assertTrue(ml, f"ML layer missing from response: {body.get('ml')}")
+        self.assertEqual(
+            hour_key(ml.get("as_of")),
+            hour_key(dataset_latest_timestamp()),
+            "ml_result.as_of does not match the dataset's latest timestamp",
+        )
+
+    def test_freshness_latest_observation_matches_ml_as_of(self):
+        body = self.forecast_with_ml()
+        fresh = body["observation_freshness"]
+        ml_as_of = (body.get("ml_result") or {}).get("as_of")
+        self.assertTrue(ml_as_of, "ML layer missing")
+        self.assertEqual(hour_key(fresh.get("latest_observation")), hour_key(ml_as_of))
+        self.assertEqual(hour_key(fresh.get("latest_observation")), hour_key(dataset_latest_timestamp()))
+        # The dataset ends in 2025, so the true age is ~10 months: still stale.
+        self.assertGreater(fresh.get("age_days") or 0, 30)
+        self.assertIn(fresh.get("latest_observation_source"), {"ml_dataset", "statistical_engine"})
+
+    def test_anchor_does_not_regress_to_august_2022(self):
+        """Guard the bug itself: the engine's Aug-2022 hourly end must not
+        become the ML anchor again."""
+        body = self.forecast_with_ml()
+        anchors = body.get("forecast_anchors") or {}
+        ml_as_of = hour_key((body.get("ml_result") or {}).get("as_of"))
+        self.assertNotEqual(ml_as_of, "2022-08-31 00:00", "ML anchor regressed to 2022-08-31")
+        self.assertGreaterEqual(int((ml_as_of or "0")[:4]), 2025)
+        self.assertEqual(hour_key(anchors.get("statistical_engine_reference_time")), "2022-08-31 00:00")
+        self.assertFalse(anchors.get("anchors_aligned"))
+        self.assertTrue(anchors.get("ensemble_mixes_anchors"))
 
 
 if __name__ == "__main__":

@@ -169,6 +169,19 @@ anchor silently. `GET /api/health` exposes the same report under
 | `GET /api/stations/india?q=&basin=&state=` | Curated river-gauge registry (basin explorer) |
 | `GET /api/levels/recent?station=`, `/api/forecast/backtest`, `/api/health` | Chart series, causal evaluation, health |
 
+### Forecast anchors
+
+`/api/forecast` reports two as-of moments in `forecast_anchors`, because the two
+components read different sources. The RF (`ml_result.as_of`) is anchored to the
+last row of `data/hf/forecast_dataset.csv`; the statistical engine
+(`reference_time`, from its Aug-2022 hourly file) cannot move past
+`calibration.hourly_end` without hourly history. While those differ,
+`anchors_aligned` is `false`, `ensemble_mixes_anchors` is `true`, and the blended
+`flood_probability_percent` combines the two moments — the card labels both.
+`observation_freshness.latest_observation` is the newest of the two (the ML row
+when the bridge is active) and its age is reported against a 48 h threshold.
+An explicit `?reference_time=` still pins both components, for back-testing.
+
 ## Key files
 
 - `app.js` — single source of truth (`FloodWatchState`), location pipeline, forecast card, markers

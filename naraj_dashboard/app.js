@@ -1025,9 +1025,24 @@ async function loadFloodForecast() {
           : '<span class="freshness-badge is-fresh">Latest observation ' +
             escapeHtml(obsStamp) + " UTC (" + escapeHtml(ageLabel) + ")</span> ";
       }
+      // The components resolve "latest observation" from different sources:
+      // the statistical engine from its Aug-2022 hourly series, the RF from
+      // the dataset's last row. Label both rather than implying one anchor.
+      var anchors = data.forecast_anchors || null;
+      var mlStamp =
+        anchors && anchors.ml_as_of
+          ? String(anchors.ml_as_of).slice(0, 16).replace("T", " ")
+          : null;
       var obsHtml = freshHtml + "<strong>" + escapeHtml(stationLabel) +
-        " · Observation basis:</strong> " +
+        " · Observation basis:</strong> engine " +
         escapeHtml(observationTime.slice(0, 16).replace("T", " ")) + " UTC";
+      if (mlStamp) {
+        obsHtml += " · ML input row " + escapeHtml(mlStamp) + " UTC";
+        if (anchors.anchors_aligned === false) {
+          obsHtml +=
+            ' <span class="muted">(components use different anchors)</span>';
+        }
+      }
       if (typeof observed.water_level_m === "number") {
         obsHtml += " · River level " + observed.water_level_m.toFixed(2) + " m";
         obsHtml += " (" + observed.monsoon_percentile + "th monsoon percentile)";
