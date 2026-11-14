@@ -390,6 +390,43 @@
     background: #eef5fc;
 }
 
+.national-station-results .national-empty {
+    padding: 8px 9px;
+    font-size: 12.5px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.national-station-results .national-empty button {
+    padding: 4px 8px;
+    border: 1px solid #c3d1de;
+    border-radius: 6px;
+    background: white;
+    font-size: 11.5px;
+    cursor: pointer;
+}
+
+.forecast-threshold-note {
+    margin: 8px 0 2px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #4a5563;
+}
+
+.national-dq-warn {
+    color: #a15200;
+    font-weight: 600;
+}
+
+.national-filter-summary {
+    display: block;
+    font-size: 11.5px;
+    color: #7a4a00;
+    margin-top: 2px;
+}
+
 .national-tier-legend {
     display: flex;
     flex-wrap: wrap;
@@ -873,7 +910,10 @@
 
         <div class="national-station-head">
             <strong>CWC stations across India</strong>
-            <span id="national-station-count" class="muted">Loading stations…</span>
+            <span class="national-station-meta">
+                <span id="national-station-count" class="muted">Loading stations…</span>
+                <span id="national-filter-summary" class="national-filter-summary"></span>
+            </span>
         </div>
 
         <div class="national-station-filters">
@@ -1338,13 +1378,20 @@
         ></div>
 
 
+        <p
+            id="forecast-threshold-note"
+            class="forecast-threshold-note"
+            hidden
+        ></p>
+
+
         <!-- FORECAST CONE CHART -->
 
         <div class="forecast-cone-wrap">
 
             <div class="forecast-cone-header">
 
-                <strong>
+                <strong id="forecast-cone-title">
                     Water level: observations & forecast cone
                 </strong>
 

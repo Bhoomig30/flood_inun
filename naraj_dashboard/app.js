@@ -593,8 +593,19 @@ function setSelectedLocation(latitude, longitude, name, options) {
     country: opts.country || "India",
   };
 
+  // A new location is not a station selection: drop any tier-3 station
+  // context so the forecast card can never describe a station the user has
+  // navigated away from. Station selection passes keepStationForecast and
+  // reloads the forecast itself.
+  if (!opts.keepStationForecast) {
+    clearStationForecastContext();
+  }
+
   // 1. Move every registered map, and remove stale location-based layers.
+  //    suppressRecenter keeps the map still when the station's recorded
+  //    coordinates are known to be inconsistent with its state.
   FloodWatchState.maps.forEach(function (map) {
+    if (opts.suppressRecenter) return;
     map.setView([latitude, longitude], opts.zoom || LOCATION_ZOOM);
   });
   removeLocationLayers();
@@ -620,6 +631,12 @@ function setSelectedLocation(latitude, longitude, name, options) {
           console.error("Location listener error:", err);
         }
       });
+      // The forecast card is location-scoped: after a search/geolocation the
+      // study forecast must be re-rendered for the new place, not left on a
+      // previously selected station.
+      if (!opts.keepStationForecast) {
+        loadFloodForecast();
+      }
       if (opts.announce !== false) {
         showStatus(
           "Location loaded: " + (name || latitude.toFixed(3) + ", " + longitude.toFixed(3)),
@@ -887,6 +904,23 @@ function removeTier3StationOption() {
   if (opt) opt.remove();
 }
 
+// Drop every trace of a national-station selection: the tier-3 context, the
+// placeholder option, the selection label and the export links.
+function clearStationForecastContext() {
+  forecastTier3Station = null;
+  selectedNationalStation = null;
+  removeTier3StationOption();
+  var picker = document.getElementById("forecast-station");
+  if (picker && currentForecastStation) picker.value = currentForecastStation;
+  var label = document.getElementById("national-station-selection");
+  if (label) {
+    label.textContent =
+      "No station selected — pick a marker or a search result. Tiers show " +
+      "what this project can actually do for each station.";
+  }
+  updateForecastExportLinks();
+}
+
 function resetTier3View() {
   var panel = document.getElementById("forecast-tier3");
   if (panel) {
@@ -954,12 +988,15 @@ function renderTier3Forecast(data) {
     forecastConeChart = null;
   }
 
-  ["forecast-replay-note", "forecast-persistence", "forecast-legacy-engine"].forEach(
-    function (id) {
-      var el = document.getElementById(id);
-      if (el) el.hidden = true;
-    }
-  );
+  [
+    "forecast-replay-note",
+    "forecast-persistence",
+    "forecast-legacy-engine",
+    "forecast-threshold-note",
+  ].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.hidden = true;
+  });
 
   var obsEl = document.getElementById("forecast-observation");
   if (obsEl) {
@@ -1147,6 +1184,47 @@ async function loadFloodForecast() {
       }
     } else if (locationEl) {
       locationEl.textContent = "📍 Model study region: " + studyRegion;
+    }
+
+    // Make the card's two different levels, and the chart's date basis,
+    // explicit instead of relying on a small caption.
+    function monthYearLabel(value) {
+      if (!value) return null;
+      var d = new Date(String(value).replace(" ", "T") + "Z");
+      if (isNaN(d.getTime())) return null;
+      return d.toLocaleString("en-GB", {
+        month: "short",
+        year: "numeric",
+        timeZone: "UTC",
+      });
+    }
+    var engineWhen = monthYearLabel(legacyStem);
+    var headlineWhen = monthYearLabel(mlAsOf);
+    var coneTitleEl = document.getElementById("forecast-cone-title");
+    if (coneTitleEl) {
+      coneTitleEl.textContent =
+        "Water level: " + (engineWhen || "legacy-engine") +
+        " observations + forecast cone" +
+        (headlineWhen ? " (headline row: " + headlineWhen + ")" : "");
+    }
+    var thresholdEl = document.getElementById("forecast-threshold-note");
+    if (thresholdEl) {
+      var persistThreshold =
+        data.persistence && data.persistence.available
+          ? Number(data.persistence.threshold_m)
+          : null;
+      // The persistence block is Naraj-only, so only mention it when it is
+      // actually on the card.
+      var persistenceShown =
+        Number.isFinite(persistThreshold) && data.station_key === "naraj";
+      thresholdEl.hidden = false;
+      thresholdEl.textContent = persistenceShown
+        ? "Two levels appear here: the dashed line on the chart is the legacy " +
+          "engine's flood-signal level, while the persistence check compares " +
+          "the latest level with the " + persistThreshold.toFixed(2) +
+          " m flood threshold from hf_forecast_baseline.json."
+        : "The dashed line on the chart is the legacy engine's flood-signal " +
+          "level, not a flood threshold.";
     }
 
     var mlNote = document.getElementById("forecast-ml-note");
@@ -1678,14 +1756,41 @@ function nationalTierColor(tier) {
   return TIER_COLORS[tier] || TIER_COLORS[3];
 }
 
-function nationalQuery() {
+function nationalQueryRaw() {
   var el = document.getElementById("national-station-search");
-  return el ? String(el.value || "").trim().toLowerCase() : "";
+  return el ? String(el.value || "").trim() : "";
+}
+
+function nationalQuery() {
+  return nationalQueryRaw().toLowerCase();
 }
 
 function nationalStateFilter() {
   var el = document.getElementById("national-station-state");
   return el ? el.value || "all" : "all";
+}
+
+function nationalFilterSummaryText() {
+  var q = nationalQueryRaw();
+  var state = nationalStateFilter();
+  var bits = [];
+  if (q) bits.push('text “' + q + '”');
+  if (state !== "all") bits.push("state: " + state);
+  return bits;
+}
+
+function updateNationalFilterSummary() {
+  var el = document.getElementById("national-filter-summary");
+  if (!el) return;
+  var bits = nationalFilterSummaryText();
+  if (!bits.length) {
+    el.textContent = "";
+    return;
+  }
+  var shown = nationalFilteredStations().length;
+  el.textContent =
+    " · showing " + shown + " of " + nationalStations.length +
+    " (" + bits.join(", ") + ")";
 }
 
 function nationalFilteredStations() {
@@ -1824,6 +1929,7 @@ function renderNationalMarkers() {
     nationalStationLayer = null;
   }
 
+  updateNationalFilterSummary();
   var stations = nationalFilteredStations();
   var layer = L.layerGroup();
   var zoom = map.getZoom();
@@ -1889,8 +1995,13 @@ function nationalMarker(st) {
     fillOpacity: 0.8,
     bubblingMouseEvents: false,
   });
+  var dqNote =
+    st.data_quality && st.data_quality.coordinate_state_mismatch
+      ? " ⚠ coordinate/state mismatch in source data"
+      : "";
   marker.bindTooltip(
-    st.station + " · " + (st.state || "") + " — " + (st.forecast_tier_label || ""),
+    st.station + " · " + (st.state || "") + " — " +
+      (st.forecast_tier_label || "") + dqNote,
     { direction: "top" }
   );
   marker.on("click", function () {
@@ -1903,7 +2014,9 @@ function renderNationalSearchResults() {
   var list = document.getElementById("national-station-results");
   if (!list) return;
   var q = nationalQuery();
-  if (!q) {
+  var state = nationalStateFilter();
+  updateNationalFilterSummary();
+  if (!q && state === "all") {
     list.hidden = true;
     list.innerHTML = "";
     return;
@@ -1911,7 +2024,33 @@ function renderNationalSearchResults() {
   var matches = nationalFilteredStations().slice(0, 10);
   list.hidden = false;
   if (!matches.length) {
-    list.innerHTML = '<li><button type="button" disabled>No station matches</button></li>';
+    // Say WHICH filters produced the empty result, and offer a one-click way
+    // to drop either of them.
+    var bits = nationalFilterSummaryText();
+    var shownQuery = nationalQueryRaw();
+    var msg = q && state !== "all"
+      ? "No stations match “" + shownQuery + "” in " + state + "."
+      : q
+        ? "No stations match “" + shownQuery + "”."
+        : "No stations in " + state + ".";
+    list.innerHTML =
+      '<li class="national-empty"><span>' + escapeHtml(msg) +
+      ' <span class="muted">Active filters: ' + escapeHtml(bits.join(", ")) +
+      "</span></span>" +
+      (q ? '<button type="button" data-clear="text">Clear text filter</button>' : "") +
+      (state !== "all" ? '<button type="button" data-clear="state">Clear state filter</button>' : "") +
+      '<button type="button" data-clear="all">Reset all</button></li>';
+    list.querySelectorAll("button[data-clear]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var what = btn.getAttribute("data-clear");
+        var search = document.getElementById("national-station-search");
+        var stateSel = document.getElementById("national-station-state");
+        if ((what === "text" || what === "all") && search) search.value = "";
+        if ((what === "state" || what === "all") && stateSel) stateSel.value = "all";
+        renderNationalSearchResults();
+        renderNationalMarkers();
+      });
+    });
     return;
   }
   list.innerHTML = "";
@@ -1919,9 +2058,11 @@ function renderNationalSearchResults() {
     var li = document.createElement("li");
     var btn = document.createElement("button");
     btn.type = "button";
+    var flagged = st.data_quality && st.data_quality.coordinate_state_mismatch;
     btn.innerHTML =
       escapeHtml(st.station) + " · " + escapeHtml(st.state || "") +
-      ' <span class="muted">(' + escapeHtml(st.forecast_tier_label || "") + ")</span>";
+      ' <span class="muted">(' + escapeHtml(st.forecast_tier_label || "") + ")</span>" +
+      (flagged ? ' <span class="national-dq-warn">⚠ coordinate/state mismatch</span>' : "");
     btn.addEventListener("click", function () {
       selectNationalStation(st);
     });
@@ -1942,10 +2083,15 @@ function selectNationalStation(st) {
         String(st.latest_observation.time).slice(0, 16).replace("T", " ") +
         " UTC"
       : "no observation recorded in the registry";
+    var dq = st.data_quality && st.data_quality.coordinate_state_mismatch;
     label.innerHTML =
       "<strong>" + escapeHtml(st.station) + "</strong> · " +
       escapeHtml(st.state || "state unknown") + " · " +
-      escapeHtml(st.forecast_tier_label || "") + " · " + escapeHtml(obsNote);
+      escapeHtml(st.forecast_tier_label || "") + " · " + escapeHtml(obsNote) +
+      (dq
+        ? ' · <span class="national-dq-warn">⚠ location in source data looks ' +
+          "inconsistent with the recorded state — map not recentred</span>"
+        : "");
   }
 
   if (st.forecast_station_key) {
@@ -1960,9 +2106,12 @@ function selectNationalStation(st) {
   }
   updateForecastExportLinks();
 
+  var flaggedCoords = !!(st.data_quality && st.data_quality.coordinate_state_mismatch);
   setSelectedLocation(st.latitude, st.longitude, st.station, {
     state: st.state || "",
     zoom: 8,
+    keepStationForecast: true,
+    suppressRecenter: flaggedCoords,
   });
   loadFloodForecast();
   renderNationalSearchResults();
