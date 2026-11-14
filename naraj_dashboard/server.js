@@ -15,6 +15,7 @@ const {
 const locationService = require("./location_service.js");
 const { locationLookup } = locationService;
 const { mlBridge } = require("./ml_bridge.js");
+const backtest = require("./backtest.js");
 
 // Resolve a station definition from a query param (default: Naraj).
 function stationDef(key) {
@@ -471,6 +472,8 @@ async function handleRequest(req, res) {
         "/api/current-condition?latitude=..&longitude=..",
         "/api/forecast/coverage?latitude=..&longitude=..",
         "/api/forecast/backtest",
+        "/api/backtest?station=naraj&time=<ISO time in the held-out test period>",
+        "/api/backtest/moments",
         "/api/levels/recent",
         "/api/model/info",
         "/api/location?latitude=..&longitude=..",
@@ -666,6 +669,102 @@ async function handleRequest(req, res) {
   // ------------------------------------------------------------------
   if (pathname === "/api/forecast/backtest") {
     return sendJSON(res, 200, predictor.backtest());
+  }
+
+  // ------------------------------------------------------------------
+  // API: historical backtest on the held-out test period (Naraj only)
+  // ------------------------------------------------------------------
+  if (pathname === "/api/backtest" || pathname === "/api/backtest/moments") {
+    const stationParam = parsed.searchParams.get("station");
+    if (stationParam && String(stationParam).trim().toLowerCase() !== "naraj") {
+      return sendJSON(res, 200, {
+        status: "station_not_supported",
+        station: stationParam,
+        reason:
+          "The backtest is available for Naraj only: it is the single station " +
+          "with a trained Random Forest in this project.",
+      });
+    }
+
+    async function backtestWithModel(time) {
+      const described = backtest.describe(time);
+      if (!described.ok) return { ok: false, payload: described };
+
+      if (!mlBridge.status().available) {
+        return {
+          ok: false,
+          payload: {
+            status: "ml_unavailable",
+            message:
+              "The Random Forest bridge is not running, so no historical " +
+              "probabilities can be shown.",
+            ml: mlBridge.status(),
+          },
+        };
+      }
+      const ml = await mlBridge.predict(described.data.time);
+      if (!ml.ok) {
+        return {
+          ok: false,
+          payload: {
+            status: "ml_unavailable",
+            message: "The model could not score this timestamp.",
+            error: ml.error || "unknown ML error",
+          },
+        };
+      }
+
+      const horizons = described.data.horizons;
+      for (const h of ["6h", "12h", "24h"]) {
+        const p = ml.horizons && ml.horizons[h] ? ml.horizons[h].probability : null;
+        horizons[h].probability = p;
+        horizons[h].probability_percent = p === null ? null : Number((p * 100).toFixed(2));
+        horizons[h].risk =
+          p === null ? null : predictor.riskBand(Number((p * 100).toFixed(2)));
+      }
+
+      return {
+        ok: true,
+        payload: Object.assign({ status: "success" }, described.data, {
+          as_of: ml.as_of,
+          model_version:
+            (ml.horizons && ml.horizons["6h"] && ml.horizons["6h"].source) || null,
+        }),
+      };
+    }
+
+    if (pathname === "/api/backtest/moments") {
+      const m = backtest.moments();
+      const items = [];
+      for (const item of m.moments) {
+        const scored = await backtestWithModel(item.time);
+        items.push({
+          time: item.time,
+          kind: item.kind,
+          label: item.label,
+          result: scored.payload,
+        });
+      }
+      return sendJSON(res, 200, {
+        status: items.some((i) => i.result.status === "success")
+          ? "success"
+          : "ml_unavailable",
+        station: "naraj",
+        test_period: m.period,
+        threshold_m: m.threshold_m,
+        note:
+          "Historical backtest moments from the held-out test period — not forecasts.",
+        items,
+      });
+    }
+
+    const scored = await backtestWithModel(parsed.searchParams.get("time"));
+    if (!scored.ok) {
+      const status = scored.payload.status;
+      const code = status === "out_of_range" || status === "invalid_time" ? 400 : 200;
+      return sendJSON(res, code, scored.payload);
+    }
+    return sendJSON(res, 200, scored.payload);
   }
 
   // ------------------------------------------------------------------
