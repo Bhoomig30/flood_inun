@@ -593,6 +593,14 @@ function setSelectedLocation(latitude, longitude, name, options) {
     country: opts.country || "India",
   };
 
+  // A new location is not a station selection: drop any tier-3 station
+  // context so the forecast card can never describe a station the user has
+  // navigated away from. Station selection passes keepStationForecast and
+  // reloads the forecast itself.
+  if (!opts.keepStationForecast) {
+    clearStationForecastContext();
+  }
+
   // 1. Move every registered map, and remove stale location-based layers.
   FloodWatchState.maps.forEach(function (map) {
     map.setView([latitude, longitude], opts.zoom || LOCATION_ZOOM);
@@ -620,6 +628,12 @@ function setSelectedLocation(latitude, longitude, name, options) {
           console.error("Location listener error:", err);
         }
       });
+      // The forecast card is location-scoped: after a search/geolocation the
+      // study forecast must be re-rendered for the new place, not left on a
+      // previously selected station.
+      if (!opts.keepStationForecast) {
+        loadFloodForecast();
+      }
       if (opts.announce !== false) {
         showStatus(
           "Location loaded: " + (name || latitude.toFixed(3) + ", " + longitude.toFixed(3)),
@@ -885,6 +899,23 @@ function removeTier3StationOption() {
   if (!picker) return;
   var opt = picker.querySelector('option[data-national-tier3="1"]');
   if (opt) opt.remove();
+}
+
+// Drop every trace of a national-station selection: the tier-3 context, the
+// placeholder option, the selection label and the export links.
+function clearStationForecastContext() {
+  forecastTier3Station = null;
+  selectedNationalStation = null;
+  removeTier3StationOption();
+  var picker = document.getElementById("forecast-station");
+  if (picker && currentForecastStation) picker.value = currentForecastStation;
+  var label = document.getElementById("national-station-selection");
+  if (label) {
+    label.textContent =
+      "No station selected — pick a marker or a search result. Tiers show " +
+      "what this project can actually do for each station.";
+  }
+  updateForecastExportLinks();
 }
 
 function resetTier3View() {
@@ -1963,6 +1994,7 @@ function selectNationalStation(st) {
   setSelectedLocation(st.latitude, st.longitude, st.station, {
     state: st.state || "",
     zoom: 8,
+    keepStationForecast: true,
   });
   loadFloodForecast();
   renderNationalSearchResults();
