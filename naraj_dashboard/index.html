@@ -408,6 +408,13 @@
     cursor: pointer;
 }
 
+.forecast-threshold-note {
+    margin: 8px 0 2px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #4a5563;
+}
+
 .national-dq-warn {
     color: #a15200;
     font-weight: 600;
@@ -1371,13 +1378,20 @@
         ></div>
 
 
+        <p
+            id="forecast-threshold-note"
+            class="forecast-threshold-note"
+            hidden
+        ></p>
+
+
         <!-- FORECAST CONE CHART -->
 
         <div class="forecast-cone-wrap">
 
             <div class="forecast-cone-header">
 
-                <strong>
+                <strong id="forecast-cone-title">
                     Water level: observations & forecast cone
                 </strong>
 

@@ -988,12 +988,15 @@ function renderTier3Forecast(data) {
     forecastConeChart = null;
   }
 
-  ["forecast-replay-note", "forecast-persistence", "forecast-legacy-engine"].forEach(
-    function (id) {
-      var el = document.getElementById(id);
-      if (el) el.hidden = true;
-    }
-  );
+  [
+    "forecast-replay-note",
+    "forecast-persistence",
+    "forecast-legacy-engine",
+    "forecast-threshold-note",
+  ].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.hidden = true;
+  });
 
   var obsEl = document.getElementById("forecast-observation");
   if (obsEl) {
@@ -1181,6 +1184,47 @@ async function loadFloodForecast() {
       }
     } else if (locationEl) {
       locationEl.textContent = "📍 Model study region: " + studyRegion;
+    }
+
+    // Make the card's two different levels, and the chart's date basis,
+    // explicit instead of relying on a small caption.
+    function monthYearLabel(value) {
+      if (!value) return null;
+      var d = new Date(String(value).replace(" ", "T") + "Z");
+      if (isNaN(d.getTime())) return null;
+      return d.toLocaleString("en-GB", {
+        month: "short",
+        year: "numeric",
+        timeZone: "UTC",
+      });
+    }
+    var engineWhen = monthYearLabel(legacyStem);
+    var headlineWhen = monthYearLabel(mlAsOf);
+    var coneTitleEl = document.getElementById("forecast-cone-title");
+    if (coneTitleEl) {
+      coneTitleEl.textContent =
+        "Water level: " + (engineWhen || "legacy-engine") +
+        " observations + forecast cone" +
+        (headlineWhen ? " (headline row: " + headlineWhen + ")" : "");
+    }
+    var thresholdEl = document.getElementById("forecast-threshold-note");
+    if (thresholdEl) {
+      var persistThreshold =
+        data.persistence && data.persistence.available
+          ? Number(data.persistence.threshold_m)
+          : null;
+      // The persistence block is Naraj-only, so only mention it when it is
+      // actually on the card.
+      var persistenceShown =
+        Number.isFinite(persistThreshold) && data.station_key === "naraj";
+      thresholdEl.hidden = false;
+      thresholdEl.textContent = persistenceShown
+        ? "Two levels appear here: the dashed line on the chart is the legacy " +
+          "engine's flood-signal level, while the persistence check compares " +
+          "the latest level with the " + persistThreshold.toFixed(2) +
+          " m flood threshold from hf_forecast_baseline.json."
+        : "The dashed line on the chart is the legacy engine's flood-signal " +
+          "level, not a flood threshold.";
     }
 
     var mlNote = document.getElementById("forecast-ml-note");
