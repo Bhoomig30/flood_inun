@@ -1709,14 +1709,41 @@ function nationalTierColor(tier) {
   return TIER_COLORS[tier] || TIER_COLORS[3];
 }
 
-function nationalQuery() {
+function nationalQueryRaw() {
   var el = document.getElementById("national-station-search");
-  return el ? String(el.value || "").trim().toLowerCase() : "";
+  return el ? String(el.value || "").trim() : "";
+}
+
+function nationalQuery() {
+  return nationalQueryRaw().toLowerCase();
 }
 
 function nationalStateFilter() {
   var el = document.getElementById("national-station-state");
   return el ? el.value || "all" : "all";
+}
+
+function nationalFilterSummaryText() {
+  var q = nationalQueryRaw();
+  var state = nationalStateFilter();
+  var bits = [];
+  if (q) bits.push('text “' + q + '”');
+  if (state !== "all") bits.push("state: " + state);
+  return bits;
+}
+
+function updateNationalFilterSummary() {
+  var el = document.getElementById("national-filter-summary");
+  if (!el) return;
+  var bits = nationalFilterSummaryText();
+  if (!bits.length) {
+    el.textContent = "";
+    return;
+  }
+  var shown = nationalFilteredStations().length;
+  el.textContent =
+    " · showing " + shown + " of " + nationalStations.length +
+    " (" + bits.join(", ") + ")";
 }
 
 function nationalFilteredStations() {
@@ -1855,6 +1882,7 @@ function renderNationalMarkers() {
     nationalStationLayer = null;
   }
 
+  updateNationalFilterSummary();
   var stations = nationalFilteredStations();
   var layer = L.layerGroup();
   var zoom = map.getZoom();
@@ -1934,7 +1962,9 @@ function renderNationalSearchResults() {
   var list = document.getElementById("national-station-results");
   if (!list) return;
   var q = nationalQuery();
-  if (!q) {
+  var state = nationalStateFilter();
+  updateNationalFilterSummary();
+  if (!q && state === "all") {
     list.hidden = true;
     list.innerHTML = "";
     return;
@@ -1942,7 +1972,33 @@ function renderNationalSearchResults() {
   var matches = nationalFilteredStations().slice(0, 10);
   list.hidden = false;
   if (!matches.length) {
-    list.innerHTML = '<li><button type="button" disabled>No station matches</button></li>';
+    // Say WHICH filters produced the empty result, and offer a one-click way
+    // to drop either of them.
+    var bits = nationalFilterSummaryText();
+    var shownQuery = nationalQueryRaw();
+    var msg = q && state !== "all"
+      ? "No stations match “" + shownQuery + "” in " + state + "."
+      : q
+        ? "No stations match “" + shownQuery + "”."
+        : "No stations in " + state + ".";
+    list.innerHTML =
+      '<li class="national-empty"><span>' + escapeHtml(msg) +
+      ' <span class="muted">Active filters: ' + escapeHtml(bits.join(", ")) +
+      "</span></span>" +
+      (q ? '<button type="button" data-clear="text">Clear text filter</button>' : "") +
+      (state !== "all" ? '<button type="button" data-clear="state">Clear state filter</button>' : "") +
+      '<button type="button" data-clear="all">Reset all</button></li>';
+    list.querySelectorAll("button[data-clear]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var what = btn.getAttribute("data-clear");
+        var search = document.getElementById("national-station-search");
+        var stateSel = document.getElementById("national-station-state");
+        if ((what === "text" || what === "all") && search) search.value = "";
+        if ((what === "state" || what === "all") && stateSel) stateSel.value = "all";
+        renderNationalSearchResults();
+        renderNationalMarkers();
+      });
+    });
     return;
   }
   list.innerHTML = "";
