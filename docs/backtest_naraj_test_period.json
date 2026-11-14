@@ -1,0 +1,284 @@
+{
+  "generated_at": "2026-11-14T22:34:19.382703+00:00",
+  "station": "naraj",
+  "dataset": "naraj_dashboard/data/hf/forecast_dataset.csv",
+  "test_period": {
+    "start": "2025-04-01 06:00:00",
+    "end": "2025-12-30 23:00:00"
+  },
+  "threshold_m": 24.28,
+  "high_band": 0.75,
+  "decision_cutoff": 0.5,
+  "rows_note": "Each horizon excludes its final h rows because those windows have no future observations; published baseline reference uses all 6570 rows.",
+  "published_reference": {
+    "6h": {
+      "rows": 6570,
+      "positives": 755,
+      "brier": 0.0227,
+      "mean_predicted_p": 0.0933,
+      "roc_auc": 0.9921,
+      "pr_auc": 0.9736,
+      "precision": 0.987,
+      "f1": 0.8861,
+      "recall": 0.804,
+      "hit_rate_at_HIGH": 0.7885,
+      "false_alarm_mean_p_on_safe_hours": 0.0031,
+      "confusion_at_0.5": {
+        "tn": 5807,
+        "fp": 8,
+        "fn": 148,
+        "tp": 607
+      }
+    },
+    "12h": {
+      "rows": 6570,
+      "positives": 797,
+      "brier": 0.03,
+      "mean_predicted_p": 0.0924,
+      "roc_auc": 0.99,
+      "pr_auc": 0.9479,
+      "precision": 0.9868,
+      "f1": 0.8525,
+      "recall": 0.7503,
+      "hit_rate_at_HIGH": 0.7311,
+      "false_alarm_mean_p_on_safe_hours": 0.0042,
+      "confusion_at_0.5": {
+        "tn": 5765,
+        "fp": 8,
+        "fn": 199,
+        "tp": 598
+      }
+    },
+    "24h": {
+      "rows": 6570,
+      "positives": 881,
+      "brier": 0.0418,
+      "mean_predicted_p": 0.093,
+      "roc_auc": 0.9825,
+      "pr_auc": 0.9154,
+      "precision": 0.9869,
+      "f1": 0.8083,
+      "recall": 0.6844,
+      "hit_rate_at_HIGH": 0.6622,
+      "false_alarm_mean_p_on_safe_hours": 0.0048,
+      "confusion_at_0.5": {
+        "tn": 5681,
+        "fp": 8,
+        "fn": 278,
+        "tp": 603
+      }
+    }
+  },
+  "results": {
+    "6h": {
+      "rows": 6564,
+      "positives": 755,
+      "negative": 5809,
+      "label_mismatches": 0,
+      "model": {
+        "at_0_5": {
+          "tn": 5801,
+          "fp": 8,
+          "fn": 148,
+          "tp": 607,
+          "precision": 0.987,
+          "recall": 0.804,
+          "f1": 0.8861
+        },
+        "brier": 0.0227,
+        "roc_auc": 0.9921,
+        "pr_auc": 0.9736,
+        "missed_positives": 148,
+        "missed_positive_rate": 0.196,
+        "high_band": {
+          "tn": 5803,
+          "fp": 6,
+          "fn": 159,
+          "tp": 596,
+          "precision": 0.99,
+          "recall": 0.7894,
+          "f1": 0.8784,
+          "hours": 602,
+          "share_of_hours": 0.0917,
+          "positives_covered": 596,
+          "share_of_positives": 0.7894,
+          "hit_rate": 0.99,
+          "mean_probability": 0.9792
+        },
+        "missed_positives_at_high": 159
+      },
+      "baseline": {
+        "definition": "predict flood if current level >= threshold",
+        "at_0_5": {
+          "tn": 5802,
+          "fp": 7,
+          "fn": 42,
+          "tp": 713,
+          "precision": 0.9903,
+          "recall": 0.9444,
+          "f1": 0.9668
+        },
+        "brier": 0.0075,
+        "roc_auc": 0.9716,
+        "pr_auc": 0.9416,
+        "missed_positives": 42,
+        "missed_positive_rate": 0.0556
+      },
+      "head_to_head": {
+        "model_wrong_baseline_right": 108,
+        "baseline_wrong_model_right": 1
+      },
+      "baseline_wins": {
+        "precision": true,
+        "recall": true,
+        "f1": true,
+        "brier": true,
+        "missed_positives": true
+      },
+      "model_wins": {
+        "roc_auc": true,
+        "pr_auc": true
+      }
+    },
+    "12h": {
+      "rows": 6558,
+      "positives": 797,
+      "negative": 5761,
+      "label_mismatches": 0,
+      "model": {
+        "at_0_5": {
+          "tn": 5753,
+          "fp": 8,
+          "fn": 199,
+          "tp": 598,
+          "precision": 0.9868,
+          "recall": 0.7503,
+          "f1": 0.8525
+        },
+        "brier": 0.0301,
+        "roc_auc": 0.9899,
+        "pr_auc": 0.9479,
+        "missed_positives": 199,
+        "missed_positive_rate": 0.2497,
+        "high_band": {
+          "tn": 5755,
+          "fp": 6,
+          "fn": 224,
+          "tp": 573,
+          "precision": 0.9896,
+          "recall": 0.7189,
+          "f1": 0.8328,
+          "hours": 579,
+          "share_of_hours": 0.0883,
+          "positives_covered": 573,
+          "share_of_positives": 0.7189,
+          "hit_rate": 0.9896,
+          "mean_probability": 0.9748
+        },
+        "missed_positives_at_high": 224
+      },
+      "baseline": {
+        "definition": "predict flood if current level >= threshold",
+        "at_0_5": {
+          "tn": 5754,
+          "fp": 7,
+          "fn": 84,
+          "tp": 713,
+          "precision": 0.9903,
+          "recall": 0.8946,
+          "f1": 0.94
+        },
+        "brier": 0.0139,
+        "roc_auc": 0.9467,
+        "pr_auc": 0.8987,
+        "missed_positives": 84,
+        "missed_positive_rate": 0.1054
+      },
+      "head_to_head": {
+        "model_wrong_baseline_right": 117,
+        "baseline_wrong_model_right": 1
+      },
+      "baseline_wins": {
+        "precision": true,
+        "recall": true,
+        "f1": true,
+        "brier": true,
+        "missed_positives": true
+      },
+      "model_wins": {
+        "roc_auc": true,
+        "pr_auc": true
+      }
+    },
+    "24h": {
+      "rows": 6546,
+      "positives": 881,
+      "negative": 5665,
+      "label_mismatches": 0,
+      "model": {
+        "at_0_5": {
+          "tn": 5657,
+          "fp": 8,
+          "fn": 278,
+          "tp": 603,
+          "precision": 0.9869,
+          "recall": 0.6844,
+          "f1": 0.8083
+        },
+        "brier": 0.042,
+        "roc_auc": 0.9824,
+        "pr_auc": 0.9154,
+        "missed_positives": 278,
+        "missed_positive_rate": 0.3156,
+        "high_band": {
+          "tn": 5658,
+          "fp": 7,
+          "fn": 300,
+          "tp": 581,
+          "precision": 0.9881,
+          "recall": 0.6595,
+          "f1": 0.791,
+          "hours": 588,
+          "share_of_hours": 0.0898,
+          "positives_covered": 581,
+          "share_of_positives": 0.6595,
+          "hit_rate": 0.9881,
+          "mean_probability": 0.9639
+        },
+        "missed_positives_at_high": 300
+      },
+      "baseline": {
+        "definition": "predict flood if current level >= threshold",
+        "at_0_5": {
+          "tn": 5658,
+          "fp": 7,
+          "fn": 168,
+          "tp": 713,
+          "precision": 0.9903,
+          "recall": 0.8093,
+          "f1": 0.8907
+        },
+        "brier": 0.0267,
+        "roc_auc": 0.904,
+        "pr_auc": 0.8271,
+        "missed_positives": 168,
+        "missed_positive_rate": 0.1907
+      },
+      "head_to_head": {
+        "model_wrong_baseline_right": 112,
+        "baseline_wrong_model_right": 1
+      },
+      "baseline_wins": {
+        "precision": true,
+        "recall": true,
+        "f1": true,
+        "brier": true,
+        "missed_positives": true
+      },
+      "model_wins": {
+        "roc_auc": true,
+        "pr_auc": true
+      }
+    }
+  }
+}
