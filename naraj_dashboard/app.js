@@ -602,7 +602,10 @@ function setSelectedLocation(latitude, longitude, name, options) {
   }
 
   // 1. Move every registered map, and remove stale location-based layers.
+  //    suppressRecenter keeps the map still when the station's recorded
+  //    coordinates are known to be inconsistent with its state.
   FloodWatchState.maps.forEach(function (map) {
+    if (opts.suppressRecenter) return;
     map.setView([latitude, longitude], opts.zoom || LOCATION_ZOOM);
   });
   removeLocationLayers();
@@ -1948,8 +1951,13 @@ function nationalMarker(st) {
     fillOpacity: 0.8,
     bubblingMouseEvents: false,
   });
+  var dqNote =
+    st.data_quality && st.data_quality.coordinate_state_mismatch
+      ? " ⚠ coordinate/state mismatch in source data"
+      : "";
   marker.bindTooltip(
-    st.station + " · " + (st.state || "") + " — " + (st.forecast_tier_label || ""),
+    st.station + " · " + (st.state || "") + " — " +
+      (st.forecast_tier_label || "") + dqNote,
     { direction: "top" }
   );
   marker.on("click", function () {
@@ -2006,9 +2014,11 @@ function renderNationalSearchResults() {
     var li = document.createElement("li");
     var btn = document.createElement("button");
     btn.type = "button";
+    var flagged = st.data_quality && st.data_quality.coordinate_state_mismatch;
     btn.innerHTML =
       escapeHtml(st.station) + " · " + escapeHtml(st.state || "") +
-      ' <span class="muted">(' + escapeHtml(st.forecast_tier_label || "") + ")</span>";
+      ' <span class="muted">(' + escapeHtml(st.forecast_tier_label || "") + ")</span>" +
+      (flagged ? ' <span class="national-dq-warn">⚠ coordinate/state mismatch</span>' : "");
     btn.addEventListener("click", function () {
       selectNationalStation(st);
     });
@@ -2029,10 +2039,15 @@ function selectNationalStation(st) {
         String(st.latest_observation.time).slice(0, 16).replace("T", " ") +
         " UTC"
       : "no observation recorded in the registry";
+    var dq = st.data_quality && st.data_quality.coordinate_state_mismatch;
     label.innerHTML =
       "<strong>" + escapeHtml(st.station) + "</strong> · " +
       escapeHtml(st.state || "state unknown") + " · " +
-      escapeHtml(st.forecast_tier_label || "") + " · " + escapeHtml(obsNote);
+      escapeHtml(st.forecast_tier_label || "") + " · " + escapeHtml(obsNote) +
+      (dq
+        ? ' · <span class="national-dq-warn">⚠ location in source data looks ' +
+          "inconsistent with the recorded state — map not recentred</span>"
+        : "");
   }
 
   if (st.forecast_station_key) {
@@ -2047,10 +2062,12 @@ function selectNationalStation(st) {
   }
   updateForecastExportLinks();
 
+  var flaggedCoords = !!(st.data_quality && st.data_quality.coordinate_state_mismatch);
   setSelectedLocation(st.latitude, st.longitude, st.station, {
     state: st.state || "",
     zoom: 8,
     keepStationForecast: true,
+    suppressRecenter: flaggedCoords,
   });
   loadFloodForecast();
   renderNationalSearchResults();
