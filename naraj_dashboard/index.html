@@ -415,6 +415,105 @@
     color: #4a5563;
 }
 
+/* BACKTEST ------------------------------------------------------------- */
+
+.backtest-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin: 12px 0;
+}
+
+.backtest-form input {
+    padding: 8px 10px;
+    border: 1px solid #c3d1de;
+    border-radius: 7px;
+    font-size: 13px;
+}
+
+.backtest-form button {
+    padding: 8px 14px;
+    border: 0;
+    border-radius: 7px;
+    background: #1769aa;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.backtest-moments {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 10px;
+    margin: 10px 0 18px;
+}
+
+.backtest-moment {
+    text-align: left;
+    padding: 10px 12px;
+    border: 1px solid #d8e2ec;
+    border-radius: 9px;
+    background: #f7fafc;
+    cursor: pointer;
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+
+.backtest-moment:hover {
+    background: #eef5fc;
+}
+
+.backtest-moment strong {
+    display: block;
+    color: #123a57;
+    margin-bottom: 2px;
+}
+
+.backtest-moment .backtest-moment-time {
+    color: #63707d;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11.5px;
+}
+
+.backtest-result {
+    margin-top: 12px;
+    overflow-x: auto;
+}
+
+.backtest-result table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+}
+
+.backtest-result th,
+.backtest-result td {
+    text-align: left;
+    padding: 7px 8px;
+    border-bottom: 1px solid #e6ecf2;
+}
+
+.backtest-result th {
+    color: #4a5563;
+    font-weight: 600;
+    background: #f4f7fa;
+}
+
+.backtest-ok { color: #1b6b3a; font-weight: 600; }
+.backtest-bad { color: #a12a20; font-weight: 600; }
+.backtest-muted { color: #6b7885; }
+
+.backtest-error {
+    margin: 10px 0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #e0b4ae;
+    background: #fdf3f2;
+    color: #7a2218;
+    font-size: 13px;
+}
+
 .national-dq-warn {
     color: #a15200;
     font-weight: 600;
@@ -742,6 +841,14 @@
         data-pubtab="pastfloods"
     >
         Past Floods
+    </button>
+
+
+    <button
+        class="pub-nav-btn"
+        data-pubtab="backtest"
+    >
+        Backtest
     </button>
 
 
@@ -2062,6 +2169,77 @@
     </div>
 
 </section>
+<!-- ========================================================
+     BACKTEST (NARAJ, HELD-OUT TEST PERIOD)
+========================================================= -->
+
+<section
+    class="pub-pane"
+    id="pub-backtest"
+>
+
+    <div class="pub-card wide">
+
+        <h2>
+            Backtest — Naraj, held-out test period
+        </h2>
+
+        <div
+            class="sat-event-banner sat-event-warn"
+            role="status"
+        >
+            <strong>Historical backtest, not a forecast.</strong>
+            Each hour below is from the model's chronological test split
+            (2025-04-01 06:00 – 2025-12-30 23:00 UTC). The Random Forest never
+            trained on these rows; the outcome shown is what actually happened
+            in the following 6, 12 and 24 hours.
+        </div>
+
+        <form
+            id="backtest-form"
+            class="backtest-form"
+        >
+            <label for="backtest-time">Score a specific hour (UTC):</label>
+            <input
+                type="datetime-local"
+                id="backtest-time"
+                min="2025-04-01T06:00"
+                max="2025-12-30T23:00"
+                step="3600"
+                required
+            />
+            <button type="submit">Run backtest</button>
+        </form>
+
+        <div
+            id="backtest-error"
+            class="backtest-error"
+            hidden
+        ></div>
+
+        <h3>Representative moments</h3>
+
+        <p class="pub-subtext">
+            Hours shortly before the river actually reached 24.28 m, plus quiet
+            hours with no crossing in the following 24 hours.
+        </p>
+
+        <div
+            id="backtest-moments"
+            class="backtest-moments"
+        >
+            <span class="muted">Loading backtest moments…</span>
+        </div>
+
+        <div
+            id="backtest-result"
+            class="backtest-result"
+        ></div>
+
+    </div>
+
+</section>
+
 <!-- ========================================================
      INDIA STATIONS EXPLORER
 ========================================================= -->

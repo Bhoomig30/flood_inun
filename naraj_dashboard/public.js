@@ -3521,6 +3521,202 @@ async function initSatelliteStory() {
 // ============================================================================
 // PAST FLOODS
 // ============================================================================
+// ============================================================================
+// BACKTEST (Naraj, held-out test period — historical, NOT a forecast)
+// ============================================================================
+
+function backtestFmtTime(value) {
+  return String(value || "")
+    .replace("T", " ")
+    .slice(0, 16);
+}
+
+function backtestShowError(message) {
+  const el = document.getElementById("backtest-error");
+  if (!el) return;
+  if (!message) {
+    el.hidden = true;
+    el.textContent = "";
+    return;
+  }
+  el.hidden = false;
+  el.textContent = message;
+}
+
+function backtestOutcomeCell(exceeded) {
+  if (exceeded === null || exceeded === undefined) {
+    return '<span class="backtest-muted">window incomplete</span>';
+  }
+  return exceeded
+    ? '<span class="backtest-bad">crossed 24.28 m</span>'
+    : '<span class="backtest-ok">stayed below</span>';
+}
+
+function renderBacktestResult(payload) {
+  const el = document.getElementById("backtest-result");
+  if (!el) return;
+
+  if (!payload || payload.status !== "success") {
+    el.innerHTML = "";
+    backtestShowError(
+      (payload && (payload.message || payload.reason)) ||
+        "Could not score that timestamp."
+    );
+    return;
+  }
+  backtestShowError("");
+
+  const horizons = ["6h", "12h", "24h"];
+  const rows = horizons
+    .map((h) => {
+      const item = payload.horizons[h] || {};
+      const p = item.probability_percent;
+      const modelSaysFlood = p !== null && p !== undefined && p >= 50;
+      const outcomeKnown = item.threshold_exceeded !== null;
+      const modelRight = outcomeKnown ? modelSaysFlood === item.threshold_exceeded : null;
+      const baselineRight = outcomeKnown
+        ? item.baseline_predicts_flood === item.threshold_exceeded
+        : null;
+      return `
+        <tr>
+          <td><strong>${h.replace("h", "")} h</strong></td>
+          <td>${p === null || p === undefined ? "—" : p.toFixed(1) + "%"}
+            <span class="backtest-muted">(${item.risk || "—"})</span></td>
+          <td>${item.max_level_m === null ? "—" : item.max_level_m.toFixed(2) + " m"}</td>
+          <td>${backtestOutcomeCell(item.threshold_exceeded)}</td>
+          <td>${item.baseline_predicts_flood ? "predicts flood" : "predicts no flood"}</td>
+          <td>${
+            modelRight === null
+              ? '<span class="backtest-muted">unknown</span>'
+              : modelRight
+              ? '<span class="backtest-ok">yes</span>'
+              : '<span class="backtest-bad">no</span>'
+          }</td>
+          <td>${
+            baselineRight === null
+              ? '<span class="backtest-muted">unknown</span>'
+              : baselineRight
+              ? '<span class="backtest-ok">yes</span>'
+              : '<span class="backtest-bad">no</span>'
+          }</td>
+        </tr>`;
+    })
+    .join("");
+
+  el.innerHTML = `
+    <p class="pub-subtext" style="margin-top:0">
+      <strong>${escapeHtmlText(backtestFmtTime(payload.time))} UTC</strong> ·
+      observed <strong>${Number(payload.observed_level_m).toFixed(2)} m</strong> ·
+      flood threshold <strong>${Number(payload.threshold_m).toFixed(2)} m</strong> ·
+      historical result, not a forecast.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Window</th>
+          <th>Model probability</th>
+          <th>Actual max level</th>
+          <th>Actual outcome</th>
+          <th>Persistence baseline</th>
+          <th>Model right at 50%</th>
+          <th>Baseline right</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <p class="muted small" style="margin-bottom:0">
+      Baseline rule: predict a flood when the observed level is already at or
+      above the threshold (no rise assumed). “Model right” compares the model's
+      50% decision with the actual outcome; aggregate results over all
+      6,570 test hours are reported in <code>docs/BACKTEST.md</code>.
+    </p>`;
+}
+
+async function fetchBacktest(time, options) {
+  const opts = options || {};
+  const res = await fetch(
+    "/api/backtest?station=naraj&time=" + encodeURIComponent(time)
+  );
+  let body = null;
+  try {
+    body = await res.json();
+  } catch (err) {
+    body = null;
+  }
+  if (!opts.silent) {
+    if (!body) {
+      backtestShowError("The backtest API returned an unreadable response.");
+    } else {
+      renderBacktestResult(body);
+    }
+  }
+  return { status: res.status, body };
+}
+
+async function initBacktest() {
+  const form = document.getElementById("backtest-form");
+  const input = document.getElementById("backtest-time");
+  const momentsEl = document.getElementById("backtest-moments");
+
+  if (form && input) {
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const value = String(input.value || "").trim();
+      if (!value) {
+        backtestShowError("Pick an hour to score.");
+        return;
+      }
+      fetchBacktest(value);
+    });
+  }
+
+  if (!momentsEl) return;
+
+  try {
+    const res = await fetch("/api/backtest/moments");
+    const body = await res.json();
+    const items = (body.items || []).filter(
+      (item) => item.result && item.result.status === "success"
+    );
+    if (!items.length) {
+      momentsEl.innerHTML =
+        '<span class="muted">No backtest moments available — the model or registry is not ready.</span>';
+      return;
+    }
+
+    momentsEl.innerHTML = "";
+    items.forEach((item, index) => {
+      const r = item.result;
+      const p24 = r.horizons["24h"] || {};
+      const outcome = r.horizons["24h"] || {};
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "backtest-moment";
+      btn.innerHTML = `
+        <strong>${escapeHtmlText(item.label)}</strong>
+        <span class="backtest-moment-time">${escapeHtmlText(backtestFmtTime(item.time))} UTC</span>
+        <span>24 h model: <strong>${p24.probability_percent === null || p24.probability_percent === undefined ? "—" : p24.probability_percent.toFixed(1) + "%"}</strong>
+        · actual: ${backtestOutcomeCell(outcome.threshold_exceeded)}
+        · baseline: ${outcome.baseline_predicts_flood ? "flood" : "no flood"}</span>`;
+      btn.addEventListener("click", () => {
+        renderBacktestResult(r);
+        if (input) input.value = String(item.time).replace(" ", "T").slice(0, 16);
+        document.getElementById("backtest-result").scrollIntoView({ block: "nearest" });
+      });
+      momentsEl.appendChild(btn);
+
+      if (index === 0) {
+        renderBacktestResult(r);
+        if (input) input.value = String(item.time).replace(" ", "T").slice(0, 16);
+      }
+    });
+  } catch (err) {
+    console.error("Backtest moments failed:", err);
+    momentsEl.innerHTML =
+      '<span class="muted">Could not load backtest moments.</span>';
+  }
+}
+
 function initPastFloods() {
 
   const el =
@@ -4106,6 +4302,12 @@ function initTourBanner() {
     // ------------------------------------------------------------------------
 
     .then(() => safeStep("past floods", initPastFloods))
+
+    // ------------------------------------------------------------------------
+    // Backtest (historical, held-out test period)
+    // ------------------------------------------------------------------------
+
+    .then(() => safeStep("backtest", initBacktest))
 
     // ------------------------------------------------------------------------
     // Guide / Tour
