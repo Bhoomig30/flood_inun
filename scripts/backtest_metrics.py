@@ -187,7 +187,17 @@ def main() -> None:
     }
     OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     OUT_JSON.write_text(json.dumps(payload, indent=2) + "\n")
-    OUT_MD.write_text(render_markdown(payload))
+    markdown = render_markdown(payload)
+
+    # The onset-only analysis is produced by scripts/onset_skill.py; append its
+    # report so a regeneration of this file does not drop it.
+    onset_md = ROOT / "docs" / "ONSET_SKILL.md"
+    if onset_md.exists():
+        section = onset_md.read_text().replace(
+            "# Onset skill", "## Onset skill", 1
+        )
+        markdown += "\n---\n\n" + section
+    OUT_MD.write_text(markdown)
     print(json.dumps(payload["results"], indent=2))
 
 

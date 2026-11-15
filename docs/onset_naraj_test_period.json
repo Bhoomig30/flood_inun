@@ -1,0 +1,1418 @@
+{
+  "generated_at": "2026-11-15T09:01:30.442276+00:00",
+  "station": "naraj",
+  "definition": "Onset = current level < threshold; positive label = flood_next_*h (threshold crossed within the following h hours).",
+  "threshold_m": 24.28,
+  "test_period": {
+    "start": "2025-04-01 06:00:00",
+    "end": "2025-12-30 23:00:00"
+  },
+  "validation_period": {
+    "start": "2024-07-01 11:00:00",
+    "end": "2025-04-01 05:00:00"
+  },
+  "tuning": "RF cutoff maximises F2 on validation onsets; the baseline rule is the family member with the highest F1 on validation onsets at its natural trigger. The test slice is never used for tuning.",
+  "results": {
+    "6h": {
+      "onsets": {
+        "validation_rows": 6187,
+        "validation_positives": 30,
+        "test_rows": 5844,
+        "test_positives": 42,
+        "test_base_rate": 0.0072,
+        "validation_median_probability_on_onsets": 0.0714,
+        "test_median_probability_on_onsets": 0.0026
+      },
+      "rf": {
+        "validation_skill": {
+          "roc_auc": 0.9929,
+          "pr_auc": 0.2452
+        },
+        "validation_cutoff_f2": {
+          "cutoff": 0.048,
+          "alerts": 96,
+          "tp": 29,
+          "fp": 67,
+          "fn": 1,
+          "precision": 0.3021,
+          "recall": 0.9667,
+          "f1": 0.4603,
+          "f2": 0.6713
+        },
+        "test_skill": {
+          "roc_auc": 0.8705,
+          "pr_auc": 0.0843
+        },
+        "at_0_5": {
+          "cutoff": 0.5,
+          "alerts": 2,
+          "tp": 0,
+          "fp": 2,
+          "fn": 42,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "at_tuned_cutoff": {
+          "cutoff": 0.048,
+          "alerts": 7,
+          "tp": 0,
+          "fp": 7,
+          "fn": 42,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        }
+      },
+      "baseline": {
+        "selected": "double_rise_24h",
+        "selection": "highest F1 on validation onsets at the natural trigger (projected level >= threshold)",
+        "validation_skill": {
+          "roc_auc": 0.9865,
+          "pr_auc": 0.1779
+        },
+        "validation_at_natural_rule": {
+          "cutoff": 0.0,
+          "alerts": 120,
+          "tp": 18,
+          "fp": 102,
+          "fn": 12,
+          "precision": 0.15,
+          "recall": 0.6,
+          "f1": 0.24
+        },
+        "test_skill": {
+          "roc_auc": 0.9425,
+          "pr_auc": 0.0618
+        },
+        "test_at_natural_rule": {
+          "cutoff": 0.0,
+          "alerts": 0,
+          "tp": 0,
+          "fp": 0,
+          "fn": 42,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "family": [
+          {
+            "name": "half_rise_3h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 18,
+              "tp": 0,
+              "fp": 18,
+              "fn": 30,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "validation_skill": {
+              "roc_auc": 0.9808,
+              "pr_auc": 0.1517
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 6,
+              "tp": 0,
+              "fp": 6,
+              "fn": 42,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "test_skill": {
+              "roc_auc": 0.9216,
+              "pr_auc": 0.0548
+            }
+          },
+          {
+            "name": "linear_rise_3h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 39,
+              "tp": 0,
+              "fp": 39,
+              "fn": 30,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "validation_skill": {
+              "roc_auc": 0.9785,
+              "pr_auc": 0.1269
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 21,
+              "tp": 0,
+              "fp": 21,
+              "fn": 42,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "test_skill": {
+              "roc_auc": 0.9214,
+              "pr_auc": 0.0535
+            }
+          },
+          {
+            "name": "double_rise_3h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 48,
+              "tp": 0,
+              "fp": 48,
+              "fn": 30,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "validation_skill": {
+              "roc_auc": 0.9781,
+              "pr_auc": 0.1241
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 24,
+              "tp": 0,
+              "fp": 24,
+              "fn": 42,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "test_skill": {
+              "roc_auc": 0.9203,
+              "pr_auc": 0.0527
+            }
+          },
+          {
+            "name": "half_rise_6h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 30,
+              "tp": 0,
+              "fp": 30,
+              "fn": 30,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "validation_skill": {
+              "roc_auc": 0.9811,
+              "pr_auc": 0.149
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 0,
+              "tp": 0,
+              "fp": 0,
+              "fn": 42,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "test_skill": {
+              "roc_auc": 0.9216,
+              "pr_auc": 0.0563
+            }
+          },
+          {
+            "name": "linear_rise_6h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 36,
+              "tp": 0,
+              "fp": 36,
+              "fn": 30,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "validation_skill": {
+              "roc_auc": 0.9779,
+              "pr_auc": 0.1265
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 12,
+              "tp": 0,
+              "fp": 12,
+              "fn": 42,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "test_skill": {
+              "roc_auc": 0.9224,
+              "pr_auc": 0.0558
+            }
+          },
+          {
+            "name": "double_rise_6h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 78,
+              "tp": 0,
+              "fp": 78,
+              "fn": 30,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "validation_skill": {
+              "roc_auc": 0.9732,
+              "pr_auc": 0.0997
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 42,
+              "tp": 0,
+              "fp": 42,
+              "fn": 42,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "test_skill": {
+              "roc_auc": 0.9219,
+              "pr_auc": 0.0533
+            }
+          },
+          {
+            "name": "half_rise_12h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 36,
+              "tp": 0,
+              "fp": 36,
+              "fn": 30,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "validation_skill": {
+              "roc_auc": 0.9798,
+              "pr_auc": 0.141
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 0,
+              "tp": 0,
+              "fp": 0,
+              "fn": 42,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "test_skill": {
+              "roc_auc": 0.923,
+              "pr_auc": 0.0598
+            }
+          },
+          {
+            "name": "linear_rise_12h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 60,
+              "tp": 0,
+              "fp": 60,
+              "fn": 30,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "validation_skill": {
+              "roc_auc": 0.9785,
+              "pr_auc": 0.128
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 0,
+              "tp": 0,
+              "fp": 0,
+              "fn": 42,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "test_skill": {
+              "roc_auc": 0.9224,
+              "pr_auc": 0.0596
+            }
+          },
+          {
+            "name": "double_rise_12h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 72,
+              "tp": 0,
+              "fp": 72,
+              "fn": 30,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "validation_skill": {
+              "roc_auc": 0.972,
+              "pr_auc": 0.0977
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 24,
+              "tp": 0,
+              "fp": 24,
+              "fn": 42,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "test_skill": {
+              "roc_auc": 0.9238,
+              "pr_auc": 0.0583
+            }
+          },
+          {
+            "name": "half_rise_24h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 72,
+              "tp": 12,
+              "fp": 60,
+              "fn": 18,
+              "precision": 0.1667,
+              "recall": 0.4,
+              "f1": 0.2353
+            },
+            "validation_skill": {
+              "roc_auc": 0.9833,
+              "pr_auc": 0.1734
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 0,
+              "tp": 0,
+              "fp": 0,
+              "fn": 42,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "test_skill": {
+              "roc_auc": 0.9321,
+              "pr_auc": 0.0557
+            }
+          },
+          {
+            "name": "linear_rise_24h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 72,
+              "tp": 12,
+              "fp": 60,
+              "fn": 18,
+              "precision": 0.1667,
+              "recall": 0.4,
+              "f1": 0.2353
+            },
+            "validation_skill": {
+              "roc_auc": 0.9841,
+              "pr_auc": 0.1694
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 0,
+              "tp": 0,
+              "fp": 0,
+              "fn": 42,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "test_skill": {
+              "roc_auc": 0.9416,
+              "pr_auc": 0.0627
+            }
+          },
+          {
+            "name": "double_rise_24h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 120,
+              "tp": 18,
+              "fp": 102,
+              "fn": 12,
+              "precision": 0.15,
+              "recall": 0.6,
+              "f1": 0.24
+            },
+            "validation_skill": {
+              "roc_auc": 0.9865,
+              "pr_auc": 0.1779
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 0,
+              "tp": 0,
+              "fp": 0,
+              "fn": 42,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "test_skill": {
+              "roc_auc": 0.9425,
+              "pr_auc": 0.0618
+            }
+          }
+        ]
+      },
+      "verdict": {
+        "rf_beats_baseline_roc_auc": false,
+        "rf_beats_baseline_pr_auc": true,
+        "rf_beats_baseline_f1": false,
+        "roc_auc_delta": -0.072,
+        "pr_auc_delta": 0.0225,
+        "f1_delta": 0.0,
+        "summary": "RF beats the baseline on 1 of 3 measures"
+      }
+    },
+    "12h": {
+      "onsets": {
+        "validation_rows": 6187,
+        "validation_positives": 60,
+        "test_rows": 5838,
+        "test_positives": 84,
+        "test_base_rate": 0.0144,
+        "validation_median_probability_on_onsets": 0.1596,
+        "test_median_probability_on_onsets": 0.0035
+      },
+      "rf": {
+        "validation_skill": {
+          "roc_auc": 0.9886,
+          "pr_auc": 0.3119
+        },
+        "validation_cutoff_f2": {
+          "cutoff": 0.047,
+          "alerts": 184,
+          "tp": 60,
+          "fp": 124,
+          "fn": 0,
+          "precision": 0.3261,
+          "recall": 1.0,
+          "f1": 0.4918,
+          "f2": 0.7075
+        },
+        "test_skill": {
+          "roc_auc": 0.9252,
+          "pr_auc": 0.1439
+        },
+        "at_0_5": {
+          "cutoff": 0.5,
+          "alerts": 2,
+          "tp": 0,
+          "fp": 2,
+          "fn": 84,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "at_tuned_cutoff": {
+          "cutoff": 0.047,
+          "alerts": 21,
+          "tp": 12,
+          "fp": 9,
+          "fn": 72,
+          "precision": 0.5714,
+          "recall": 0.1429,
+          "f1": 0.2286
+        }
+      },
+      "baseline": {
+        "selected": "double_rise_24h",
+        "selection": "highest F1 on validation onsets at the natural trigger (projected level >= threshold)",
+        "validation_skill": {
+          "roc_auc": 0.9853,
+          "pr_auc": 0.26
+        },
+        "validation_at_natural_rule": {
+          "cutoff": 0.0,
+          "alerts": 144,
+          "tp": 48,
+          "fp": 96,
+          "fn": 12,
+          "precision": 0.3333,
+          "recall": 0.8,
+          "f1": 0.4706
+        },
+        "test_skill": {
+          "roc_auc": 0.9528,
+          "pr_auc": 0.1521
+        },
+        "test_at_natural_rule": {
+          "cutoff": 0.0,
+          "alerts": 48,
+          "tp": 0,
+          "fp": 48,
+          "fn": 84,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "family": [
+          {
+            "name": "half_rise_3h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 39,
+              "tp": 0,
+              "fp": 39,
+              "fn": 60,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "validation_skill": {
+              "roc_auc": 0.9808,
+              "pr_auc": 0.2537
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 21,
+              "tp": 0,
+              "fp": 21,
+              "fn": 84,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "test_skill": {
+              "roc_auc": 0.9244,
+              "pr_auc": 0.107
+            }
+          },
+          {
+            "name": "linear_rise_3h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 48,
+              "tp": 0,
+              "fp": 48,
+              "fn": 60,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "validation_skill": {
+              "roc_auc": 0.9804,
+              "pr_auc": 0.2482
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 24,
+              "tp": 0,
+              "fp": 24,
+              "fn": 84,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "test_skill": {
+              "roc_auc": 0.9232,
+              "pr_auc": 0.1054
+            }
+          },
+          {
+            "name": "double_rise_3h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 60,
+              "tp": 0,
+              "fp": 60,
+              "fn": 60,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "validation_skill": {
+              "roc_auc": 0.9778,
+              "pr_auc": 0.2211
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 48,
+              "tp": 0,
+              "fp": 48,
+              "fn": 84,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "test_skill": {
+              "roc_auc": 0.9214,
+              "pr_auc": 0.1009
+            }
+          },
+          {
+            "name": "half_rise_6h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 36,
+              "tp": 0,
+              "fp": 36,
+              "fn": 60,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "validation_skill": {
+              "roc_auc": 0.9802,
+              "pr_auc": 0.2529
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 12,
+              "tp": 0,
+              "fp": 12,
+              "fn": 84,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "test_skill": {
+              "roc_auc": 0.9254,
+              "pr_auc": 0.1117
+            }
+          },
+          {
+            "name": "linear_rise_6h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 78,
+              "tp": 0,
+              "fp": 78,
+              "fn": 60,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "validation_skill": {
+              "roc_auc": 0.9755,
+              "pr_auc": 0.1994
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 42,
+              "tp": 0,
+              "fp": 42,
+              "fn": 84,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "test_skill": {
+              "roc_auc": 0.9249,
+              "pr_auc": 0.1066
+            }
+          },
+          {
+            "name": "double_rise_6h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 96,
+              "tp": 0,
+              "fp": 96,
+              "fn": 60,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "validation_skill": {
+              "roc_auc": 0.9747,
+              "pr_auc": 0.1936
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 48,
+              "tp": 0,
+              "fp": 48,
+              "fn": 84,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "test_skill": {
+              "roc_auc": 0.9226,
+              "pr_auc": 0.1035
+            }
+          },
+          {
+            "name": "half_rise_12h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 60,
+              "tp": 0,
+              "fp": 60,
+              "fn": 60,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "validation_skill": {
+              "roc_auc": 0.9808,
+              "pr_auc": 0.2561
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 0,
+              "tp": 0,
+              "fp": 0,
+              "fn": 84,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "test_skill": {
+              "roc_auc": 0.9254,
+              "pr_auc": 0.1192
+            }
+          },
+          {
+            "name": "linear_rise_12h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 72,
+              "tp": 0,
+              "fp": 72,
+              "fn": 60,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "validation_skill": {
+              "roc_auc": 0.9743,
+              "pr_auc": 0.1954
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 24,
+              "tp": 0,
+              "fp": 24,
+              "fn": 84,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "test_skill": {
+              "roc_auc": 0.9269,
+              "pr_auc": 0.1166
+            }
+          },
+          {
+            "name": "double_rise_12h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 156,
+              "tp": 0,
+              "fp": 156,
+              "fn": 60,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "validation_skill": {
+              "roc_auc": 0.9649,
+              "pr_auc": 0.1462
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 84,
+              "tp": 0,
+              "fp": 84,
+              "fn": 84,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "test_skill": {
+              "roc_auc": 0.926,
+              "pr_auc": 0.1063
+            }
+          },
+          {
+            "name": "half_rise_24h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 72,
+              "tp": 24,
+              "fp": 48,
+              "fn": 36,
+              "precision": 0.3333,
+              "recall": 0.4,
+              "f1": 0.3636
+            },
+            "validation_skill": {
+              "roc_auc": 0.9865,
+              "pr_auc": 0.3388
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 0,
+              "tp": 0,
+              "fp": 0,
+              "fn": 84,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "test_skill": {
+              "roc_auc": 0.9447,
+              "pr_auc": 0.1254
+            }
+          },
+          {
+            "name": "linear_rise_24h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 120,
+              "tp": 36,
+              "fp": 84,
+              "fn": 24,
+              "precision": 0.3,
+              "recall": 0.6,
+              "f1": 0.4
+            },
+            "validation_skill": {
+              "roc_auc": 0.9888,
+              "pr_auc": 0.3558
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 0,
+              "tp": 0,
+              "fp": 0,
+              "fn": 84,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "test_skill": {
+              "roc_auc": 0.9456,
+              "pr_auc": 0.1237
+            }
+          },
+          {
+            "name": "double_rise_24h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 144,
+              "tp": 48,
+              "fp": 96,
+              "fn": 12,
+              "precision": 0.3333,
+              "recall": 0.8,
+              "f1": 0.4706
+            },
+            "validation_skill": {
+              "roc_auc": 0.9853,
+              "pr_auc": 0.26
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 48,
+              "tp": 0,
+              "fp": 48,
+              "fn": 84,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "test_skill": {
+              "roc_auc": 0.9528,
+              "pr_auc": 0.1521
+            }
+          }
+        ]
+      },
+      "verdict": {
+        "rf_beats_baseline_roc_auc": false,
+        "rf_beats_baseline_pr_auc": false,
+        "rf_beats_baseline_f1": true,
+        "roc_auc_delta": -0.0276,
+        "pr_auc_delta": -0.0082,
+        "f1_delta": 0.2286,
+        "summary": "RF beats the baseline on 1 of 3 measures"
+      }
+    },
+    "24h": {
+      "onsets": {
+        "validation_rows": 6187,
+        "validation_positives": 120,
+        "test_rows": 5826,
+        "test_positives": 168,
+        "test_base_rate": 0.0288,
+        "validation_median_probability_on_onsets": 0.2754,
+        "test_median_probability_on_onsets": 0.0043
+      },
+      "rf": {
+        "validation_skill": {
+          "roc_auc": 0.9859,
+          "pr_auc": 0.3977
+        },
+        "validation_cutoff_f2": {
+          "cutoff": 0.085,
+          "alerts": 280,
+          "tp": 120,
+          "fp": 160,
+          "fn": 0,
+          "precision": 0.4286,
+          "recall": 1.0,
+          "f1": 0.6,
+          "f2": 0.7895
+        },
+        "test_skill": {
+          "roc_auc": 0.9316,
+          "pr_auc": 0.2122
+        },
+        "at_0_5": {
+          "cutoff": 0.5,
+          "alerts": 2,
+          "tp": 0,
+          "fp": 2,
+          "fn": 168,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "at_tuned_cutoff": {
+          "cutoff": 0.085,
+          "alerts": 15,
+          "tp": 3,
+          "fp": 12,
+          "fn": 165,
+          "precision": 0.2,
+          "recall": 0.0179,
+          "f1": 0.0328
+        }
+      },
+      "baseline": {
+        "selected": "linear_rise_24h",
+        "selection": "highest F1 on validation onsets at the natural trigger (projected level >= threshold)",
+        "validation_skill": {
+          "roc_auc": 0.9901,
+          "pr_auc": 0.52
+        },
+        "validation_at_natural_rule": {
+          "cutoff": 0.0,
+          "alerts": 144,
+          "tp": 96,
+          "fp": 48,
+          "fn": 24,
+          "precision": 0.6667,
+          "recall": 0.8,
+          "f1": 0.7273
+        },
+        "test_skill": {
+          "roc_auc": 0.9594,
+          "pr_auc": 0.3043
+        },
+        "test_at_natural_rule": {
+          "cutoff": 0.0,
+          "alerts": 48,
+          "tp": 0,
+          "fp": 48,
+          "fn": 168,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "family": [
+          {
+            "name": "half_rise_3h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 48,
+              "tp": 15,
+              "fp": 33,
+              "fn": 105,
+              "precision": 0.3125,
+              "recall": 0.125,
+              "f1": 0.1786
+            },
+            "validation_skill": {
+              "roc_auc": 0.9878,
+              "pr_auc": 0.5305
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 24,
+              "tp": 9,
+              "fp": 15,
+              "fn": 159,
+              "precision": 0.375,
+              "recall": 0.0536,
+              "f1": 0.0938
+            },
+            "test_skill": {
+              "roc_auc": 0.9261,
+              "pr_auc": 0.2226
+            }
+          },
+          {
+            "name": "linear_rise_3h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 60,
+              "tp": 15,
+              "fp": 45,
+              "fn": 105,
+              "precision": 0.25,
+              "recall": 0.125,
+              "f1": 0.1667
+            },
+            "validation_skill": {
+              "roc_auc": 0.9853,
+              "pr_auc": 0.469
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 48,
+              "tp": 9,
+              "fp": 39,
+              "fn": 159,
+              "precision": 0.1875,
+              "recall": 0.0536,
+              "f1": 0.0833
+            },
+            "test_skill": {
+              "roc_auc": 0.9129,
+              "pr_auc": 0.2206
+            }
+          },
+          {
+            "name": "double_rise_3h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 72,
+              "tp": 15,
+              "fp": 57,
+              "fn": 105,
+              "precision": 0.2083,
+              "recall": 0.125,
+              "f1": 0.1562
+            },
+            "validation_skill": {
+              "roc_auc": 0.9842,
+              "pr_auc": 0.441
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 66,
+              "tp": 9,
+              "fp": 57,
+              "fn": 159,
+              "precision": 0.1364,
+              "recall": 0.0536,
+              "f1": 0.0769
+            },
+            "test_skill": {
+              "roc_auc": 0.9046,
+              "pr_auc": 0.2086
+            }
+          },
+          {
+            "name": "half_rise_6h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 78,
+              "tp": 30,
+              "fp": 48,
+              "fn": 90,
+              "precision": 0.3846,
+              "recall": 0.25,
+              "f1": 0.303
+            },
+            "validation_skill": {
+              "roc_auc": 0.986,
+              "pr_auc": 0.4673
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 42,
+              "tp": 18,
+              "fp": 24,
+              "fn": 150,
+              "precision": 0.4286,
+              "recall": 0.1071,
+              "f1": 0.1714
+            },
+            "test_skill": {
+              "roc_auc": 0.9362,
+              "pr_auc": 0.2439
+            }
+          },
+          {
+            "name": "linear_rise_6h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 96,
+              "tp": 30,
+              "fp": 66,
+              "fn": 90,
+              "precision": 0.3125,
+              "recall": 0.25,
+              "f1": 0.2778
+            },
+            "validation_skill": {
+              "roc_auc": 0.985,
+              "pr_auc": 0.4383
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 48,
+              "tp": 18,
+              "fp": 30,
+              "fn": 150,
+              "precision": 0.375,
+              "recall": 0.1071,
+              "f1": 0.1667
+            },
+            "test_skill": {
+              "roc_auc": 0.9224,
+              "pr_auc": 0.2303
+            }
+          },
+          {
+            "name": "double_rise_6h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 120,
+              "tp": 30,
+              "fp": 90,
+              "fn": 90,
+              "precision": 0.25,
+              "recall": 0.25,
+              "f1": 0.25
+            },
+            "validation_skill": {
+              "roc_auc": 0.9807,
+              "pr_auc": 0.3695
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 96,
+              "tp": 18,
+              "fp": 78,
+              "fn": 150,
+              "precision": 0.1875,
+              "recall": 0.1071,
+              "f1": 0.1364
+            },
+            "test_skill": {
+              "roc_auc": 0.8964,
+              "pr_auc": 0.2298
+            }
+          },
+          {
+            "name": "half_rise_12h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 72,
+              "tp": 48,
+              "fp": 24,
+              "fn": 72,
+              "precision": 0.6667,
+              "recall": 0.4,
+              "f1": 0.5
+            },
+            "validation_skill": {
+              "roc_auc": 0.9893,
+              "pr_auc": 0.5385
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 24,
+              "tp": 0,
+              "fp": 24,
+              "fn": 168,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "test_skill": {
+              "roc_auc": 0.9461,
+              "pr_auc": 0.2415
+            }
+          },
+          {
+            "name": "linear_rise_12h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 156,
+              "tp": 60,
+              "fp": 96,
+              "fn": 60,
+              "precision": 0.3846,
+              "recall": 0.5,
+              "f1": 0.4348
+            },
+            "validation_skill": {
+              "roc_auc": 0.9833,
+              "pr_auc": 0.4094
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 84,
+              "tp": 36,
+              "fp": 48,
+              "fn": 132,
+              "precision": 0.4286,
+              "recall": 0.2143,
+              "f1": 0.2857
+            },
+            "test_skill": {
+              "roc_auc": 0.9417,
+              "pr_auc": 0.2722
+            }
+          },
+          {
+            "name": "double_rise_12h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 192,
+              "tp": 60,
+              "fp": 132,
+              "fn": 60,
+              "precision": 0.3125,
+              "recall": 0.5,
+              "f1": 0.3846
+            },
+            "validation_skill": {
+              "roc_auc": 0.9809,
+              "pr_auc": 0.3662
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 96,
+              "tp": 36,
+              "fp": 60,
+              "fn": 132,
+              "precision": 0.375,
+              "recall": 0.2143,
+              "f1": 0.2727
+            },
+            "test_skill": {
+              "roc_auc": 0.9158,
+              "pr_auc": 0.2457
+            }
+          },
+          {
+            "name": "half_rise_24h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 120,
+              "tp": 72,
+              "fp": 48,
+              "fn": 48,
+              "precision": 0.6,
+              "recall": 0.6,
+              "f1": 0.6
+            },
+            "validation_skill": {
+              "roc_auc": 0.9937,
+              "pr_auc": 0.7117
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 0,
+              "tp": 0,
+              "fp": 0,
+              "fn": 168,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "test_skill": {
+              "roc_auc": 0.9521,
+              "pr_auc": 0.2473
+            }
+          },
+          {
+            "name": "linear_rise_24h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 144,
+              "tp": 96,
+              "fp": 48,
+              "fn": 24,
+              "precision": 0.6667,
+              "recall": 0.8,
+              "f1": 0.7273
+            },
+            "validation_skill": {
+              "roc_auc": 0.9901,
+              "pr_auc": 0.52
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 48,
+              "tp": 0,
+              "fp": 48,
+              "fn": 168,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "test_skill": {
+              "roc_auc": 0.9594,
+              "pr_auc": 0.3043
+            }
+          },
+          {
+            "name": "double_rise_24h",
+            "validation_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 312,
+              "tp": 120,
+              "fp": 192,
+              "fn": 0,
+              "precision": 0.3846,
+              "recall": 1.0,
+              "f1": 0.5556
+            },
+            "validation_skill": {
+              "roc_auc": 0.9842,
+              "pr_auc": 0.4233
+            },
+            "test_at_natural_rule": {
+              "cutoff": 0.0,
+              "alerts": 168,
+              "tp": 72,
+              "fp": 96,
+              "fn": 96,
+              "precision": 0.4286,
+              "recall": 0.4286,
+              "f1": 0.4286
+            },
+            "test_skill": {
+              "roc_auc": 0.9506,
+              "pr_auc": 0.3268
+            }
+          }
+        ]
+      },
+      "verdict": {
+        "rf_beats_baseline_roc_auc": false,
+        "rf_beats_baseline_pr_auc": false,
+        "rf_beats_baseline_f1": true,
+        "roc_auc_delta": -0.0278,
+        "pr_auc_delta": -0.0921,
+        "f1_delta": 0.0328,
+        "summary": "RF beats the baseline on 1 of 3 measures"
+      }
+    }
+  }
+}
