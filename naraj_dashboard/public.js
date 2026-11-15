@@ -3653,7 +3653,94 @@ async function fetchBacktest(time, options) {
   return { status: res.status, body };
 }
 
+function renderOnsetSkill(payload) {
+  const el = document.getElementById("onset-skill");
+  const verdictEl = document.getElementById("onset-verdict");
+  if (!el) return;
+
+  if (!payload || payload.status !== "success" || !payload.results) {
+    el.innerHTML =
+      '<span class="muted">Onset results are not available on this deployment.</span>';
+    return;
+  }
+
+  const horizons = ["6h", "12h", "24h"];
+  const rows = horizons
+    .map((h) => {
+      const x = payload.results[h];
+      if (!x) return "";
+      const rf = x.rf;
+      const base = x.baseline;
+      const pct = (v) => (v === null || v === undefined ? "—" : (100 * v).toFixed(1) + "%");
+      return `
+        <tr>
+          <td><strong>${h.replace("h", "")} h</strong></td>
+          <td>${x.onsets.test_rows}</td>
+          <td>${x.onsets.test_positives}</td>
+          <td>${rf.test_skill.roc_auc.toFixed(3)} <span class="backtest-muted">vs ${base.test_skill.roc_auc.toFixed(3)}</span></td>
+          <td>${rf.test_skill.pr_auc.toFixed(3)} <span class="backtest-muted">vs ${base.test_skill.pr_auc.toFixed(3)}</span></td>
+          <td>${pct(rf.at_0_5.recall)} / ${pct(rf.at_0_5.precision)}</td>
+          <td>${rf.at_tuned_cutoff.cutoff.toFixed(3)}</td>
+          <td>${pct(rf.at_tuned_cutoff.recall)} / ${pct(rf.at_tuned_cutoff.precision)}</td>
+          <td>${pct(base.test_at_natural_rule.recall)} / ${pct(base.test_at_natural_rule.precision)}</td>
+        </tr>`;
+    })
+    .join("");
+
+  el.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Horizon</th>
+          <th>Onset rows</th>
+          <th>True onsets</th>
+          <th>ROC-AUC (RF vs base)</th>
+          <th>PR-AUC (RF vs base)</th>
+          <th>RF recall / precision @0.5</th>
+          <th>RF tuned cutoff</th>
+          <th>RF recall / precision @tuned</th>
+          <th>Baseline recall / precision</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+
+  const r6 = payload.results["6h"];
+  const r12 = payload.results["12h"];
+  const r24 = payload.results["24h"];
+  if (verdictEl) {
+    verdictEl.innerHTML =
+      `The Random Forest does <strong>not</strong> beat the best simple baseline on ` +
+      `onsets overall: baseline ROC-AUC is higher at every horizon ` +
+      `(${r6.baseline.test_skill.roc_auc.toFixed(3)}, ${r12.baseline.test_skill.roc_auc.toFixed(3)}, ` +
+      `${r24.baseline.test_skill.roc_auc.toFixed(3)} vs ` +
+      `${r6.rf.test_skill.roc_auc.toFixed(3)}, ${r12.rf.test_skill.roc_auc.toFixed(3)}, ` +
+      `${r24.rf.test_skill.roc_auc.toFixed(3)}), and baseline PR-AUC is higher at 12 h and 24 h. ` +
+      `At the default 0.5 cutoff the RF finds no true onsets at any horizon; at its ` +
+      `validation-tuned cutoffs it recalls ` +
+      `${(100 * r6.rf.at_tuned_cutoff.recall).toFixed(1)}%, ` +
+      `${(100 * r12.rf.at_tuned_cutoff.recall).toFixed(1)}% and ` +
+      `${(100 * r24.rf.at_tuned_cutoff.recall).toFixed(1)}% of onsets. ` +
+      `Neither approach is reliable for onset detection here.`;
+  }
+}
+
+async function initOnsetSkill() {
+  const el = document.getElementById("onset-skill");
+  if (!el) return;
+  try {
+    const res = await fetch("/api/backtest/onset-skill");
+    renderOnsetSkill(await res.json());
+  } catch (err) {
+    console.error("Onset skill failed:", err);
+    el.innerHTML =
+      '<span class="muted">Could not load onset skill results.</span>';
+  }
+}
+
 async function initBacktest() {
+  initOnsetSkill();
+
   const form = document.getElementById("backtest-form");
   const input = document.getElementById("backtest-time");
   const momentsEl = document.getElementById("backtest-moments");

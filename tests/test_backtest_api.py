@@ -221,6 +221,29 @@ class BacktestApiTests(unittest.TestCase):
         self.assertEqual(status, 400)
         self.assertEqual(body.get("status"), "invalid_time")
 
+    def test_onset_skill_endpoint_reports_validation_tuned_results(self):
+        status, body = http_json(self.url("/api/backtest/onset-skill"))
+        self.assertEqual(status, 200)
+        self.assertEqual(body.get("status"), "success", str(body)[:200])
+        self.assertIn("validation_period", body)
+        self.assertIn("test_period", body)
+        results = body.get("results") or {}
+        for h in HORIZONS:
+            with self.subTest(horizon=h):
+                item = results[h]
+                self.assertGreater(item["onsets"]["test_rows"], 0)
+                self.assertGreater(item["onsets"]["test_positives"], 0)
+                self.assertLessEqual(
+                    item["onsets"]["test_positives"], item["onsets"]["test_rows"]
+                )
+                cut = item["rf"]["at_tuned_cutoff"]["cutoff"]
+                self.assertGreater(cut, 0.0)
+                self.assertLess(cut, 0.5)
+                for name in ("roc_auc", "pr_auc"):
+                    self.assertGreaterEqual(item["rf"]["test_skill"][name], 0.0)
+                    self.assertGreaterEqual(item["baseline"]["test_skill"][name], 0.0)
+                self.assertIn("summary", item["verdict"])
+
     def test_station_without_model_is_refused(self):
         status, body = self.backtest(VALID_TIME, station="alipingal")
         self.assertEqual(status, 200)

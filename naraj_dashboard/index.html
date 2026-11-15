@@ -2236,6 +2236,29 @@
             class="backtest-result"
         ></div>
 
+        <h3>Onset skill — hours below 24.28 m</h3>
+
+        <p class="pub-subtext">
+            Onsets only: this table excludes every hour already above the
+            threshold and asks whether the river crossed within 6, 12 or 24
+            hours. The model's decision threshold and the baseline rule are
+            chosen on the <strong>validation slice</strong> (2024-07-01 →
+            2025-04-01), never on the test period, and the headline
+            probabilities above are unchanged.
+        </p>
+
+        <div
+            id="onset-skill"
+            class="backtest-result"
+        >
+            <span class="muted">Loading onset skill…</span>
+        </div>
+
+        <p
+            id="onset-verdict"
+            class="pub-subtext"
+        ></p>
+
     </div>
 
 </section>

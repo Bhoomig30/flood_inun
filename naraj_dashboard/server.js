@@ -474,6 +474,7 @@ async function handleRequest(req, res) {
         "/api/forecast/backtest",
         "/api/backtest?station=naraj&time=<ISO time in the held-out test period>",
         "/api/backtest/moments",
+        "/api/backtest/onset-skill",
         "/api/levels/recent",
         "/api/model/info",
         "/api/location?latitude=..&longitude=..",
@@ -674,6 +675,25 @@ async function handleRequest(req, res) {
   // ------------------------------------------------------------------
   // API: historical backtest on the held-out test period (Naraj only)
   // ------------------------------------------------------------------
+  if (pathname === "/api/backtest/onset-skill") {
+    try {
+      const doc = JSON.parse(
+        fs.readFileSync(
+          path.join(__dirname, "..", "docs", "onset_naraj_test_period.json"),
+          "utf-8"
+        )
+      );
+      return sendJSON(res, 200, Object.assign({ status: "success" }, doc));
+    } catch (err) {
+      return sendJSON(res, 200, {
+        status: "not_available",
+        message:
+          "Onset results have not been generated on this deployment. Run " +
+          "scripts/onset_skill.py to produce docs/onset_naraj_test_period.json.",
+      });
+    }
+  }
+
   if (pathname === "/api/backtest" || pathname === "/api/backtest/moments") {
     const stationParam = parsed.searchParams.get("station");
     if (stationParam && String(stationParam).trim().toLowerCase() !== "naraj") {
